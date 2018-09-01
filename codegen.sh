@@ -18,6 +18,6 @@ scriptdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 cd ${scriptdir}/vendor/k8s.io/code-generator && ./generate-groups.sh \
   all \
-  github.com/dimm0/k8s_portal/pkg/client \
-  github.com/dimm0/k8s_portal/pkg/apis \
-  "optiputer.net:v1alpha1" \
+  gitlab.com/ucsd-prp/nrp-controller/pkg/client \
+  gitlab.com/ucsd-prp/nrp-controller/pkg/apis \
+  "nrp-nautilus.io:v1alpha1" \

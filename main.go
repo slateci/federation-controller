@@ -5,9 +5,14 @@ import (
 	"k8s.io/client-go/rest"
 	"time"
 	"k8s.io/client-go/tools/cache"
+	"log"
+	nrpapi "gitlab.com/ucsd-prp/nrp-controller/pkg/apis/nrp-nautilus.io/v1alpha1"
+	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+
 )
 
 var clientset *kubernetes.Clientset
+var crdclient *nrpapi.CrdClient
 
 func main() {
 	k8sconfig, err := rest.InClusterConfig()
@@ -15,6 +20,14 @@ func main() {
 		log.Fatal("Failed to do inclusterconfig: " + err.Error())
 		return
 	}
+
+	// Create a new clientset which include our CRD schema
+	crdcs, scheme, err := nrpapi.NewClient(k8sconfig)
+	if err != nil {
+		log.Printf("Error creating CRD client: %s", err.Error())
+	}
+
+	crdclient = nrpapi.MakeCrdClient(crdcs, scheme, "default")
 
 	clientset, err = kubernetes.NewForConfig(k8sconfig)
 	if err != nil {
@@ -36,7 +49,7 @@ func GetCrd() {
 		panic(err.Error())
 	}
 
-	if err := nautilusapi.CreateCRD(crdclientset); err != nil {
+	if err := nrpapi.CreateCRD(crdclientset); err != nil {
 		log.Printf("Error creating CRD: %s", err.Error())
 	}
 
@@ -45,57 +58,35 @@ func GetCrd() {
 
 	_, controller := cache.NewInformer(
 		crdclient.NewListWatch(),
-		&nautilusapi.PRPUser{},
+		&nrpapi.Cluster{},
 		time.Minute*5,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				user, ok := obj.(*nautilusapi.PRPUser)
+				_, ok := obj.(*nrpapi.Cluster)
 				if !ok {
-					log.Printf("Expected PRPUser but other received %#v", obj)
+					log.Printf("Expected Cluster but other received %#v", obj)
 					return
 				}
 
-				updateClusterUserPrivileges(user)
 			},
 			DeleteFunc: func(obj interface{}) {
-				user, ok := obj.(*nautilusapi.PRPUser)
+				_, ok := obj.(*nrpapi.Cluster)
 				if !ok {
-					log.Printf("Expected PRPUser but other received %#v", obj)
+					log.Printf("Expected Cluster but other received %#v", obj)
 					return
 				}
 
-				if rb, err := clientset.Rbac().ClusterRoleBindings().Get("nautilus-cluster-user", metav1.GetOptions{}); err == nil {
-					allSubjects := []rbacv1.Subject{} // to filter the user, in case we need to delete one
-
-					found := false
-					for _, subj := range rb.Subjects {
-						if subj.Name == user.Spec.UserID {
-							found = true
-						} else {
-							allSubjects = append(allSubjects, subj)
-						}
-					}
-					if found {
-						rb.Subjects = allSubjects
-						if _, err := clientset.Rbac().ClusterRoleBindings().Update(rb); err != nil {
-							log.Printf("Error updating user %s: %s", user.Name, err.Error())
-						}
-					}
-				}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				oldUser, ok := oldObj.(*nautilusapi.PRPUser)
+				_, ok := oldObj.(*nrpapi.Cluster)
 				if !ok {
-					log.Printf("Expected PRPUser but other received %#v", oldObj)
+					log.Printf("Expected Cluster but other received %#v", oldObj)
 					return
 				}
-				newUser, ok := newObj.(*nautilusapi.PRPUser)
+				_, ok = newObj.(*nrpapi.Cluster)
 				if !ok {
-					log.Printf("Expected PRPUser but other received %#v", newObj)
+					log.Printf("Expected Cluster but other received %#v", newObj)
 					return
-				}
-				if oldUser.Spec.Role != newUser.Spec.Role {
-					updateClusterUserPrivileges(newUser)
 				}
 			},
 		},
