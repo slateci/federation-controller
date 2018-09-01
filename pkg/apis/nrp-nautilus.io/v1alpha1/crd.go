@@ -27,7 +27,7 @@ func CreateCRD(clientset apiextcs.Interface) error {
 		ObjectMeta: meta_v1.ObjectMeta{Name: FullCRDName},
 		Spec: apiextv1beta1.CustomResourceDefinitionSpec{
 			Group:   CRDGroup,
-			Version: CRDVersion,
+			Versions: []Version{CRDVersion},
 			Scope:   apiextv1beta1.ClusterScoped,
 			Names: apiextv1beta1.CustomResourceDefinitionNames{
 				Plural: CRDPlural,

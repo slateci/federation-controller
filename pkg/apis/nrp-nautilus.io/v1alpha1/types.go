@@ -8,6 +8,7 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"github.com/prometheus/procfs"
 )
 
 // +genclient
@@ -22,6 +23,7 @@ type Cluster struct {
 
 type ClusterSpec struct {
 	Organization   string `json:""`
+	Namespace      string `json:""`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
