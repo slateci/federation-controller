@@ -43,7 +43,7 @@ To federate with another cluster, we create the Cluster CRD object. The controll
 
 [![asciicast](https://asciinema.org/a/BWXytQziditkuW0jAR4reGonx.png)](https://asciinema.org/a/BWXytQziditkuW0jAR4reGonx)
 
-For all service accounts kubernetes automatically creates the tokens, which will allow federated cluster to act as this service account in the current cluster. The account by default only has access to its primary namespace. The token fromt he secret can be then added to a config file and securely sent to the owners of federated clusters, providing them access to this cluster according to the cluster-federation role defined by admin.
+For new service account kubernetes automatically creates a token, which will allow federated cluster to act as this service account in the current cluster. The account by default only has access to its primary namespace. The token can be then added to a config file and securely sent to owners of the federated cluster, providing them access to this cluster according to the cluster-federation role defined by admin.
 
 [![asciicast](https://asciinema.org/a/ZYIPVyFwqC3SkhnNNMBUmJsdI.png)](https://asciinema.org/a/ZYIPVyFwqC3SkhnNNMBUmJsdI)
 
