@@ -3,7 +3,7 @@ This project provides code for NRP controller - the component allowing federatin
 
 ### Developing
 
-`go get gitlab.com/ucsd-prp-nrp-controller`
+`go get gitlab.com/ucsd-prp/nrp-controller`
 
 From project folder:
 
