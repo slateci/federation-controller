@@ -46,3 +46,4 @@ To federate with another cluster, we create the Cluster CRD object. The controll
 Inside the namespace it will create a service account with rolebinding to cluster-federation clusterrole, and kubernetes will automatically issue a token for the service account in secret in the same namespace. This token can be used to access the resources by the federated cluster.
 [![asciicast](https://asciinema.org/a/fZXrBEBu9Tr24qU3r8oGLXjVh.png)](https://asciinema.org/a/fZXrBEBu9Tr24qU3r8oGLXjVh)
 
+To request creation of additional namespaces belonging to the same federated cluster, it can create the "clusternamespace" CRD object in its namespace. The operator will discover the new object and create the corresponding namespace with same service account in it.
