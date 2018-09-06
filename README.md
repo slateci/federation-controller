@@ -34,7 +34,7 @@ The controller creates 2 [CRDs](https://kubernetes.io/docs/concepts/extend-kuber
 
 * clusters.nrp-nautilus.io - Each CRD is an external federated cluster (or some other entity needing to federate)
 
-* clusternamespaces.nrp-nautilus.io - the namespaces in current cluster belonging to external federated cluster
+* clusternamespaces.nrp-nautilus.io - additional namespaces in current cluster belonging to external federated cluster
 
 ```
 $ kubectl get crds | grep nrp-nautilus
