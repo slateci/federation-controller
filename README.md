@@ -42,3 +42,7 @@ The clusters.nrp-nautilus.io are cluster-wide.
 To federate with another cluster, we create the Cluster CRD object. The controller is watching the cluster objects, and will create the namespace corresponding to the cluster name. If such namespace is already taken, it will prepend a number to it.
 
 [![asciicast](https://asciinema.org/a/L0xoBr7ljntJ9h5bvZ5499QRd.png)](https://asciinema.org/a/L0xoBr7ljntJ9h5bvZ5499QRd)
+
+Inside the namespace it will create a service account with rolebinding to cluster-federation clusterrole, and kubernetes will automatically issue a token for the service account in secret in the same namespace. This token can be used to access the resources by the federated cluster.
+[![asciicast](https://asciinema.org/a/fZXrBEBu9Tr24qU3r8oGLXjVh.png)](https://asciinema.org/a/fZXrBEBu9Tr24qU3r8oGLXjVh)
+
