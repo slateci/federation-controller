@@ -187,12 +187,16 @@ func GetCrd() {
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
-				_, ok := obj.(*nrpapi.ClusterNamespace)
+				clusterNs, ok := obj.(*nrpapi.ClusterNamespace)
 				if !ok {
 					log.Printf("Expected ClusterNamespace but other received %#v", obj)
 					return
 				}
 
+				if err := clientset.CoreV1().Namespaces().Delete(clusterNs.Name, metav1.DeleteOptions{}); err == nil {
+					log.Printf("Error deleting namespace for cluster: %s", err.Error())
+					return
+				}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				_, ok := oldObj.(*nrpapi.ClusterNamespace)
