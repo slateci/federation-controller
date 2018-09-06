@@ -1,7 +1,7 @@
-#apiVersion: nrp-nautilus.io/v1alpha1
-#kind: Cluster
-#metadata:
-#  name: cluster1
+apiVersion: nrp-nautilus.io/v1alpha1
+kind: Cluster
+metadata:
+  name: cluster1
 ---
 apiVersion: nrp-nautilus.io/v1alpha1
 kind: ClusterNamespace
