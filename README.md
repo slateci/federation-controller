@@ -39,11 +39,16 @@ clusters.nrp-nautilus.io                      2018-09-06T00:50:33Z
 
 The clusters.nrp-nautilus.io are cluster-wide.
 
-To federate with another cluster, we create the Cluster CRD object. The controller is watching the cluster objects, and will create the namespace corresponding to the cluster name. If such namespace is already taken, it will prepend a number to it.
+To federate with another cluster, we create the Cluster CRD object. The controller is watching the cluster objects, and will create the namespace corresponding to the cluster name. If such namespace is already taken, it will prepend a number to it. The cluster object will have the spec/namespace field changed to have the name of primary namespace. Inside the namespace it will create a service account with rolebinding to cluster-federation clusterrole. Once we delete the cluster, the associated namespace will be also deleted with all the contents in it.
 
-[![asciicast](https://asciinema.org/a/L0xoBr7ljntJ9h5bvZ5499QRd.png)](https://asciinema.org/a/L0xoBr7ljntJ9h5bvZ5499QRd)
+[![asciicast](https://asciinema.org/a/BWXytQziditkuW0jAR4reGonx.png)](https://asciinema.org/a/BWXytQziditkuW0jAR4reGonx)
 
-Inside the namespace it will create a service account with rolebinding to cluster-federation clusterrole, and kubernetes will automatically issue a token for the service account in secret in the same namespace. This token can be used to access the resources by the federated cluster.
-[![asciicast](https://asciinema.org/a/fZXrBEBu9Tr24qU3r8oGLXjVh.png)](https://asciinema.org/a/fZXrBEBu9Tr24qU3r8oGLXjVh)
+For all service accounts kubernetes automatically creates the tokens, which will allow federated cluster to act as this service account in the current cluster. The account by default only has access to its primary namespace. The token fromt he secret can be then added to a config file and securely sent to the owners of federated clusters, providing them access to this cluster according to the cluster-federation role defined by admin.
 
-To request creation of additional namespaces belonging to the same federated cluster, it can create the "clusternamespace" CRD object in its namespace. The operator will discover the new object and create the corresponding namespace with same service account in it.
+[![asciicast](https://asciinema.org/a/ZYIPVyFwqC3SkhnNNMBUmJsdI.png)](https://asciinema.org/a/ZYIPVyFwqC3SkhnNNMBUmJsdI)
+
+To request creation of additional namespaces belonging to the same federated cluster, it can create the "clusternamespace" CRD object in its namespace. The operator will discover the new object and create the corresponding namespace with same service account in it, so that the same token will be valid to access both primary namespace and additional one(s). Deleting the clusternamespace object will result in deletion of the corresponding namespace. Deletin of the cluster object by admin will result in deletion of the primary and all additional namespaces.
+
+[![asciicast](https://asciinema.org/a/l7pwo4kXPV4XcWYoGfNlAUEat.png)](https://asciinema.org/a/l7pwo4kXPV4XcWYoGfNlAUEat)
+
+
