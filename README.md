@@ -47,7 +47,7 @@ For new service account kubernetes automatically creates a token, which will all
 
 [![asciicast](https://asciinema.org/a/ZYIPVyFwqC3SkhnNNMBUmJsdI.png)](https://asciinema.org/a/ZYIPVyFwqC3SkhnNNMBUmJsdI)
 
-To request creation of additional namespaces belonging to the same federated cluster, it can create the "clusternamespace" CRD object in its namespace. The operator will discover the new object and create the corresponding namespace with same service account in it, so that the same token will be valid to access both primary namespace and additional one(s). Deleting the clusternamespace object will result in deletion of the corresponding namespace. Deletin of the cluster object by admin will result in deletion of the primary and all additional namespaces.
+To request creation of additional namespaces belonging to the same federated cluster, it can create the "clusternamespace" CRD object in its namespace. The operator will discover the new object and create the corresponding namespace with same service account in it, so that the same token will be valid to access both primary namespace and additional one(s). Deleting the clusternamespace object will result in deletion of the corresponding namespace. Deletion of the cluster object by admin will result in deletion of the primary and all additional namespaces.
 
 [![asciicast](https://asciinema.org/a/l7pwo4kXPV4XcWYoGfNlAUEat.png)](https://asciinema.org/a/l7pwo4kXPV4XcWYoGfNlAUEat)
 
