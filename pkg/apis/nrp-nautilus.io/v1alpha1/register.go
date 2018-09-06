@@ -13,16 +13,7 @@ var (
 )
 
 // schemeGroupVersion is group version used to register these objects
-var SchemeGroupVersion = schema.GroupVersion{Group: "optiputer.net", Version: "v1alpha1"}
-
-// var NautilusResource = CustomResource{
-// 	Name:    "prpuser",
-// 	Plural:  "prpusers",
-// 	Group:   "nautilus",
-// 	Version: "v1alpha1",
-// 	Scope:   apiextensionsv1beta1.NamespaceScoped,
-// 	Kind:    reflect.TypeOf(PRPUser{}).Name(),
-// }
+var SchemeGroupVersion = schema.GroupVersion{Group: "nrp-nautilus.io", Version: "v1alpha1"}
 
 func init() {
 	// We only register manually written functions here. The registration of the
@@ -39,8 +30,8 @@ func Resource(resource string) schema.GroupResource {
 // Adds the list of known types to api.Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&PRPUser{},
-		&PRPUserList{},
+		&Cluster{},
+		&ClusterList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

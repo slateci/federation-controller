@@ -1,14 +1,10 @@
 package v1alpha1
 
 import (
-	"strings"
-
-	authv1 "k8s.io/api/authorization/v1"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"github.com/prometheus/procfs"
 )
 
 // +genclient
@@ -42,7 +38,7 @@ func (cluster Cluster) GetClusterClientset() (*kubernetes.Clientset, error) {
 	}
 
 	clusterk8sconfig.Impersonate = rest.ImpersonationConfig{
-		ClusterName: cluster.Name,
+		UserName: cluster.Name,
 	}
 
 	return kubernetes.NewForConfig(clusterk8sconfig)

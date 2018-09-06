@@ -39,6 +39,11 @@ func main() {
 		log.Printf("Error creating client: %s", err.Error())
 	}
 
+	go func(){
+		GetCrd()
+	}()
+
+	select {}
 
 }
 
@@ -78,21 +83,32 @@ func GetCrd() {
 							Name: findFreeNamespace(cluster.Name),
 						},
 					}); err == nil {
-						clientset.RbacV1().Roles(clusterns.Name).Create()
-						clientset.RbacV1().RoleBindings(clusterns.Name).Create(&rbacv1.RoleBinding{
+						if srvAcc, err := clientset.CoreV1().ServiceAccounts(clusterns.Name).Create(&v1.ServiceAccount{
 							ObjectMeta: metav1.ObjectMeta{
-								Name: "clusterrolebinding",
+								Name: cluster.Name,
+								Namespace: clusterns.Name,
 							},
-
-							Rules: []rbacv1.PolicyRule{
-								{
-									APIGroups:     []string{"extensions"},
-									Verbs:         []string{"use"},
-									Resources:     []string{"podsecuritypolicies"},
-									ResourceNames: []string{"nautilususerpolicy"},
+						}); err == nil {
+							clientset.RbacV1().RoleBindings(clusterns.Name).Create(&rbacv1.RoleBinding{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: cluster.Name,
 								},
-							},
-						})
+								RoleRef: rbacv1.RoleRef{
+									Kind: "ClusterRole",
+									Name: "admin",
+									APIGroup: "rbac.authorization.k8s.io",
+								},
+								Subjects: []rbacv1.Subject{
+									rbacv1.Subject{
+										Kind: "ServiceAccount",
+										Name: srvAcc.Name,
+									},
+								},
+							})
+						} else {
+							log.Printf("Error creating service account %s", err.Error())
+							return
+						}
 					} else {
 						log.Printf("Error creating cluster namespace %s", err.Error())
 						return
@@ -134,10 +150,11 @@ func findFreeNamespace(pattern string) string {
 		return pattern
 	}
 	num := 0
-	try_name := fmt.Sprintf("%s-%d", pattern, num)
-	for _, err := clientset.CoreV1().Namespaces().Get(try_name, metav1.GetOptions{}); err == nil {
+	tryName := fmt.Sprintf("%s-%d", pattern, num)
+	var err error = nil
+	for ; err != nil; _, err = clientset.CoreV1().Namespaces().Get(tryName, metav1.GetOptions{}) {
 		num += 1
-		try_name := fmt.Sprintf("%s-%d", pattern, num)
+		tryName = fmt.Sprintf("%s-%d", pattern, num)
 	}
-	return try_name
+	return tryName
 }

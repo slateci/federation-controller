@@ -26,12 +26,18 @@ func CreateCRD(clientset apiextcs.Interface) error {
 	crd := &apiextv1beta1.CustomResourceDefinition{
 		ObjectMeta: meta_v1.ObjectMeta{Name: FullCRDName},
 		Spec: apiextv1beta1.CustomResourceDefinitionSpec{
-			Group:   CRDGroup,
-			Versions: []Version{CRDVersion},
-			Scope:   apiextv1beta1.ClusterScoped,
+			Group: CRDGroup,
+			Versions: []apiextv1beta1.CustomResourceDefinitionVersion{
+				{
+					Name:    CRDVersion,
+					Served:  true,
+					Storage: true,
+				},
+			},
+			Scope: apiextv1beta1.ClusterScoped,
 			Names: apiextv1beta1.CustomResourceDefinitionNames{
 				Plural: CRDPlural,
-				Kind:   reflect.TypeOf(PRPUser{}).Name(),
+				Kind:   reflect.TypeOf(Cluster{}).Name(),
 			},
 		},
 	}
@@ -78,16 +84,16 @@ type CrdClient struct {
 	codec  runtime.ParameterCodec
 }
 
-func (f *CrdClient) Create(obj *PRPUser) (*PRPUser, error) {
-	var result PRPUser
+func (f *CrdClient) Create(obj *Cluster) (*Cluster, error) {
+	var result Cluster
 	err := f.cl.Post().
 		Namespace(f.ns).Resource(f.plural).
 		Body(obj).Do().Into(&result)
 	return &result, err
 }
 
-func (f *CrdClient) Update(obj *PRPUser) (*PRPUser, error) {
-	var result PRPUser
+func (f *CrdClient) Update(obj *Cluster) (*Cluster, error) {
+	var result Cluster
 	err := f.cl.Put().
 		Namespace(f.ns).Resource(f.plural).Name(obj.Name).
 		Body(obj).Do().Into(&result)
@@ -101,16 +107,16 @@ func (f *CrdClient) Delete(name string, options *meta_v1.DeleteOptions) error {
 		Error()
 }
 
-func (f *CrdClient) Get(name string) (*PRPUser, error) {
-	var result PRPUser
+func (f *CrdClient) Get(name string) (*Cluster, error) {
+	var result Cluster
 	err := f.cl.Get().
 		Namespace(f.ns).Resource(f.plural).
 		Name(name).Do().Into(&result)
 	return &result, err
 }
 
-func (f *CrdClient) List(opts meta_v1.ListOptions) (*PRPUserList, error) {
-	var result PRPUserList
+func (f *CrdClient) List(opts meta_v1.ListOptions) (*ClusterList, error) {
+	var result ClusterList
 	err := f.cl.Get().
 		Namespace(f.ns).Resource(f.plural).
 		VersionedParams(&opts, f.codec).
