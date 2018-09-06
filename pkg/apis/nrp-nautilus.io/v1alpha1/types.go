@@ -22,16 +22,50 @@ type ClusterSpec struct {
 	Namespace      string `json:""`
 }
 
+// +genclient
+// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// PRPUserList is a list of PRP users
+type ClusterNamespace struct {
+	meta_v1.TypeMeta   `json:",inline"`
+	meta_v1.ObjectMeta `json:"metadata"`
+	Spec               ClusterSpec `json:"spec"`
+}
+
+type ClusterNamespaceSpec struct {
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 type ClusterList struct {
 	meta_v1.TypeMeta `json:",inline"`
 	meta_v1.ListMeta `json:"metadata"`
 	Items            []Cluster `json:"items"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type ClusterNamespaceList struct {
+	meta_v1.TypeMeta `json:",inline"`
+	meta_v1.ListMeta `json:"metadata"`
+	Items            []ClusterNamespace `json:"items"`
+}
+
 func (cluster Cluster) GetClusterClientset() (*kubernetes.Clientset, error) {
+	clusterk8sconfig, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	clusterk8sconfig.Impersonate = rest.ImpersonationConfig{
+		UserName: cluster.Name,
+	}
+
+	return kubernetes.NewForConfig(clusterk8sconfig)
+
+}
+
+func (cluster ClusterNamespace) GetClusterNamespaceClientset() (*kubernetes.Clientset, error) {
 	clusterk8sconfig, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err

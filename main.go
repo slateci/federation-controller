@@ -17,7 +17,8 @@ import (
 )
 
 var clientset *kubernetes.Clientset
-var crdclient *nrpapi.CrdClient
+var clustcrdclient *nrpapi.ClusterCrdClient
+var clustnscrdclient *nrpapi.ClusterNSCrdClient
 
 func main() {
 	k8sconfig, err := rest.InClusterConfig()
@@ -32,7 +33,8 @@ func main() {
 		log.Printf("Error creating CRD client: %s", err.Error())
 	}
 
-	crdclient = nrpapi.MakeCrdClient(crdcs, scheme, "default")
+	clustcrdclient = nrpapi.MakeClusterCrdClient(crdcs, scheme, "")
+	clustnscrdclient = nrpapi.MakeClusterNSCrdClient(crdcs, scheme, "")
 
 	clientset, err = kubernetes.NewForConfig(k8sconfig)
 	if err != nil {
@@ -59,17 +61,21 @@ func GetCrd() {
 		panic(err.Error())
 	}
 
-	if err := nrpapi.CreateCRD(crdclientset); err != nil {
+	if err := nrpapi.CreateClusterCRD(crdclientset); err != nil {
+		log.Printf("Error creating CRD: %s", err.Error())
+	}
+
+	if err := nrpapi.CreateNSCRD(crdclientset); err != nil {
 		log.Printf("Error creating CRD: %s", err.Error())
 	}
 
 	// Wait for the CRD to be created before we use it (only needed if its a new one)
 	time.Sleep(3 * time.Second)
 
-	_, controller := cache.NewInformer(
-		crdclient.NewListWatch(),
+	_, clusterController := cache.NewInformer(
+		clustcrdclient.NewListWatch(),
 		&nrpapi.Cluster{},
-		time.Minute*5,
+		time.Minute*1,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				cluster, ok := obj.(*nrpapi.Cluster)
@@ -77,7 +83,7 @@ func GetCrd() {
 					log.Printf("Expected Cluster but other received %#v", obj)
 					return
 				}
-				if cluster.Namespace == "" {
+				if cluster.Spec.Namespace == "" {
 					if clusterns, err := clientset.CoreV1().Namespaces().Create(&v1.Namespace{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: findFreeNamespace(cluster.Name),
@@ -105,6 +111,9 @@ func GetCrd() {
 									},
 								},
 							})
+
+							cluster.Spec.Namespace = clusterns.Name
+							clustcrdclient.Update(cluster)
 						} else {
 							log.Printf("Error creating service account %s", err.Error())
 							return
@@ -138,8 +147,71 @@ func GetCrd() {
 		},
 	)
 
+
+	_, clusterNSController := cache.NewInformer(
+		clustnscrdclient.NewListWatch(),
+		&nrpapi.ClusterNamespace{},
+		time.Minute*1,
+		cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				clusterNs, ok := obj.(*nrpapi.ClusterNamespace)
+				if !ok {
+					log.Printf("Expected ClusterNamespace but other received %#v", obj)
+					return
+				}
+				if clusterns, err := clientset.CoreV1().Namespaces().Create(&v1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: clusterNs.Name,
+					},
+				}); err == nil {
+					clientset.RbacV1().RoleBindings(clusterns.Name).Create(&rbacv1.RoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: clusterNs.Name,
+						},
+						RoleRef: rbacv1.RoleRef{
+							Kind: "ClusterRole",
+							Name: "admin",
+							APIGroup: "rbac.authorization.k8s.io",
+						},
+						Subjects: []rbacv1.Subject{
+							rbacv1.Subject{
+								Kind: "ServiceAccount",
+								Name: clusterNs.Namespace,
+								Namespace: clusterNs.Namespace,
+							},
+						},
+					})
+				} else {
+					log.Printf("Error creating cluster namespace %s", err.Error())
+					return
+				}
+			},
+			DeleteFunc: func(obj interface{}) {
+				_, ok := obj.(*nrpapi.ClusterNamespace)
+				if !ok {
+					log.Printf("Expected ClusterNamespace but other received %#v", obj)
+					return
+				}
+
+			},
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				_, ok := oldObj.(*nrpapi.ClusterNamespace)
+				if !ok {
+					log.Printf("Expected Cluster but other received %#v", oldObj)
+					return
+				}
+				_, ok = newObj.(*nrpapi.ClusterNamespace)
+				if !ok {
+					log.Printf("Expected Cluster but other received %#v", newObj)
+					return
+				}
+			},
+		},
+	)
+
 	stop := make(chan struct{})
-	go controller.Run(stop)
+	go clusterController.Run(stop)
+	go clusterNSController.Run(stop)
 
 	// Wait forever
 	select {}

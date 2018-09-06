@@ -15,29 +15,29 @@ import (
 )
 
 const (
-	CRDPlural   string = "clusters"
-	CRDGroup    string = "nrp-nautilus.io"
-	CRDVersion  string = "v1alpha1"
-	FullCRDName string = CRDPlural + "." + CRDGroup
+	ClusterNSCRDPlural   string = "clusternamespaces"
+	ClusterNSCRDGroup    string = "nrp-nautilus.io"
+	ClusterNSCRDVersion  string = "v1alpha1"
+	ClusterNSFullCRDName string = ClusterNSCRDPlural + "." + ClusterNSCRDGroup
 )
 
 // Create the CRD resource, ignore error if it already exists
-func CreateCRD(clientset apiextcs.Interface) error {
+func CreateNSCRD(clientset apiextcs.Interface) error {
 	crd := &apiextv1beta1.CustomResourceDefinition{
-		ObjectMeta: meta_v1.ObjectMeta{Name: FullCRDName},
+		ObjectMeta: meta_v1.ObjectMeta{Name: ClusterNSFullCRDName},
 		Spec: apiextv1beta1.CustomResourceDefinitionSpec{
-			Group: CRDGroup,
+			Group: ClusterNSCRDGroup,
 			Versions: []apiextv1beta1.CustomResourceDefinitionVersion{
 				{
-					Name:    CRDVersion,
+					Name:    ClusterNSCRDVersion,
 					Served:  true,
 					Storage: true,
 				},
 			},
-			Scope: apiextv1beta1.ClusterScoped,
+			Scope: apiextv1beta1.NamespaceScoped,
 			Names: apiextv1beta1.CustomResourceDefinitionNames{
-				Plural: CRDPlural,
-				Kind:   reflect.TypeOf(Cluster{}).Name(),
+				Plural: ClusterNSCRDPlural,
+				Kind:   reflect.TypeOf(ClusterNamespace{}).Name(),
 			},
 		},
 	}
@@ -71,52 +71,52 @@ func NewClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
 	return client, scheme, nil
 }
 
-func MakeCrdClient(cl *rest.RESTClient, scheme *runtime.Scheme, namespace string) *CrdClient {
-	return &CrdClient{cl: cl, ns: namespace, plural: CRDPlural,
+func MakeClusterNSCrdClient(cl *rest.RESTClient, scheme *runtime.Scheme, namespace string) *ClusterNSCrdClient {
+	return &ClusterNSCrdClient{cl: cl, ns: namespace, plural: ClusterNSCRDPlural,
 		codec: runtime.NewParameterCodec(scheme)}
 }
 
 // +k8s:deepcopy-gen=false
-type CrdClient struct {
+type ClusterNSCrdClient struct {
 	cl     *rest.RESTClient
 	ns     string
 	plural string
 	codec  runtime.ParameterCodec
 }
 
-func (f *CrdClient) Create(obj *Cluster) (*Cluster, error) {
-	var result Cluster
+func (f *ClusterNSCrdClient) Create(obj *ClusterNamespace) (*ClusterNamespace, error) {
+	var result ClusterNamespace
 	err := f.cl.Post().
 		Namespace(f.ns).Resource(f.plural).
 		Body(obj).Do().Into(&result)
 	return &result, err
 }
 
-func (f *CrdClient) Update(obj *Cluster) (*Cluster, error) {
-	var result Cluster
+func (f *ClusterNSCrdClient) Update(obj *ClusterNamespace) (*ClusterNamespace, error) {
+	var result ClusterNamespace
 	err := f.cl.Put().
 		Namespace(f.ns).Resource(f.plural).Name(obj.Name).
 		Body(obj).Do().Into(&result)
 	return &result, err
 }
 
-func (f *CrdClient) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (f *ClusterNSCrdClient) Delete(name string, options *meta_v1.DeleteOptions) error {
 	return f.cl.Delete().
 		Namespace(f.ns).Resource(f.plural).
 		Name(name).Body(options).Do().
 		Error()
 }
 
-func (f *CrdClient) Get(name string) (*Cluster, error) {
-	var result Cluster
+func (f *ClusterNSCrdClient) Get(name string) (*ClusterNamespace, error) {
+	var result ClusterNamespace
 	err := f.cl.Get().
 		Namespace(f.ns).Resource(f.plural).
 		Name(name).Do().Into(&result)
 	return &result, err
 }
 
-func (f *CrdClient) List(opts meta_v1.ListOptions) (*ClusterList, error) {
-	var result ClusterList
+func (f *ClusterNSCrdClient) List(opts meta_v1.ListOptions) (*ClusterNamespaceList, error) {
+	var result ClusterNamespaceList
 	err := f.cl.Get().
 		Namespace(f.ns).Resource(f.plural).
 		VersionedParams(&opts, f.codec).
@@ -125,6 +125,6 @@ func (f *CrdClient) List(opts meta_v1.ListOptions) (*ClusterList, error) {
 }
 
 // Create a new List watch for our TPR
-func (f *CrdClient) NewListWatch() *cache.ListWatch {
+func (f *ClusterNSCrdClient) NewListWatch() *cache.ListWatch {
 	return cache.NewListWatchFromClient(f.cl, f.plural, f.ns, fields.Everything())
 }
