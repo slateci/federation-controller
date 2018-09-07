@@ -71,15 +71,14 @@ func NewClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
 	return client, scheme, nil
 }
 
-func MakeClusterNSCrdClient(cl *rest.RESTClient, scheme *runtime.Scheme, namespace string) *ClusterNSCrdClient {
-	return &ClusterNSCrdClient{cl: cl, ns: namespace, plural: ClusterNSCRDPlural,
+func MakeClusterNSCrdClient(cl *rest.RESTClient, scheme *runtime.Scheme) *ClusterNSCrdClient {
+	return &ClusterNSCrdClient{cl: cl, plural: ClusterNSCRDPlural,
 		codec: runtime.NewParameterCodec(scheme)}
 }
 
 // +k8s:deepcopy-gen=false
 type ClusterNSCrdClient struct {
 	cl     *rest.RESTClient
-	ns     string
 	plural string
 	codec  runtime.ParameterCodec
 }
@@ -87,7 +86,7 @@ type ClusterNSCrdClient struct {
 func (f *ClusterNSCrdClient) Create(obj *ClusterNamespace) (*ClusterNamespace, error) {
 	var result ClusterNamespace
 	err := f.cl.Post().
-		Namespace(f.ns).Resource(f.plural).
+		Namespace(obj.Namespace).Resource(f.plural).
 		Body(obj).Do().Into(&result)
 	return &result, err
 }
@@ -95,36 +94,36 @@ func (f *ClusterNSCrdClient) Create(obj *ClusterNamespace) (*ClusterNamespace, e
 func (f *ClusterNSCrdClient) Update(obj *ClusterNamespace) (*ClusterNamespace, error) {
 	var result ClusterNamespace
 	err := f.cl.Put().
-		Namespace(f.ns).Resource(f.plural).Name(obj.Name).
+		Namespace(obj.Namespace).Resource(f.plural).Name(obj.Name).
 		Body(obj).Do().Into(&result)
 	return &result, err
 }
 
-func (f *ClusterNSCrdClient) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (f *ClusterNSCrdClient) Delete(name string, namespace string, options *meta_v1.DeleteOptions) error {
 	return f.cl.Delete().
-		Namespace(f.ns).Resource(f.plural).
+		Namespace(namespace).Resource(f.plural).
 		Name(name).Body(options).Do().
 		Error()
 }
 
-func (f *ClusterNSCrdClient) Get(name string) (*ClusterNamespace, error) {
+func (f *ClusterNSCrdClient) Get(name string, namespace string) (*ClusterNamespace, error) {
 	var result ClusterNamespace
 	err := f.cl.Get().
-		Namespace(f.ns).Resource(f.plural).
+		Namespace(namespace).Resource(f.plural).
 		Name(name).Do().Into(&result)
 	return &result, err
 }
 
-func (f *ClusterNSCrdClient) List(opts meta_v1.ListOptions) (*ClusterNamespaceList, error) {
+func (f *ClusterNSCrdClient) List(namespace string, opts meta_v1.ListOptions) (*ClusterNamespaceList, error) {
 	var result ClusterNamespaceList
 	err := f.cl.Get().
-		Namespace(f.ns).Resource(f.plural).
+		Namespace(namespace).Resource(f.plural).
 		VersionedParams(&opts, f.codec).
 		Do().Into(&result)
 	return &result, err
 }
 
 // Create a new List watch for our TPR
-func (f *ClusterNSCrdClient) NewListWatch() *cache.ListWatch {
-	return cache.NewListWatchFromClient(f.cl, f.plural, f.ns, fields.Everything())
+func (f *ClusterNSCrdClient) NewListWatch(namespace string) *cache.ListWatch {
+	return cache.NewListWatchFromClient(f.cl, f.plural, namespace, fields.Everything())
 }

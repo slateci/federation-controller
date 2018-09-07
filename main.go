@@ -33,8 +33,8 @@ func main() {
 		log.Printf("Error creating CRD client: %s", err.Error())
 	}
 
-	clustcrdclient = nrpapi.MakeClusterCrdClient(crdcs, scheme, "")
-	clustnscrdclient = nrpapi.MakeClusterNSCrdClient(crdcs, scheme, "")
+	clustcrdclient = nrpapi.MakeClusterCrdClient(crdcs, scheme, "default")
+	clustnscrdclient = nrpapi.MakeClusterNSCrdClient(crdcs, scheme)
 
 	clientset, err = kubernetes.NewForConfig(k8sconfig)
 	if err != nil {
@@ -95,7 +95,7 @@ func GetCrd() {
 								Namespace: clusterns.Name,
 							},
 						}); err == nil {
-							clientset.RbacV1().RoleBindings(clusterns.Name).Create(&rbacv1.RoleBinding{
+							if _, err := clientset.RbacV1().RoleBindings(clusterns.Name).Create(&rbacv1.RoleBinding{
 								ObjectMeta: metav1.ObjectMeta{
 									Name: cluster.Name,
 								},
@@ -110,10 +110,14 @@ func GetCrd() {
 										Name: srvAcc.Name,
 									},
 								},
-							})
+							}); err != nil {
+								log.Printf("Error creating federation-cluster rolebinding %s", err.Error())
+							}
 
 							cluster.Spec.Namespace = clusterns.Name
-							clustcrdclient.Update(cluster)
+							if _, err := clustcrdclient.Update(cluster); err != nil {
+								log.Printf("Error updating cluster %s ns %s", cluster.Name, err.Error())
+							}
 						} else {
 							log.Printf("Error creating service account %s", err.Error())
 							return
@@ -125,12 +129,24 @@ func GetCrd() {
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
-				_, ok := obj.(*nrpapi.Cluster)
+				cluster, ok := obj.(*nrpapi.Cluster)
 				if !ok {
 					log.Printf("Expected Cluster but other received %#v", obj)
 					return
 				}
+				if cluster.Spec.Namespace != "" {
+					if clusterNamespaces, err := clustnscrdclient.List(cluster.Spec.Namespace, metav1.ListOptions{}); err == nil {
+						for _, clusterNs := range clusterNamespaces.Items {
+							if err := clientset.CoreV1().Namespaces().Delete(clusterNs.Name, &metav1.DeleteOptions{}); err != nil {
+								fmt.Printf("Error deleting clusternamespace %s %s", clusterNs.Name, err.Error())
+							}
+						}
+						if err := clientset.CoreV1().Namespaces().Delete(cluster.Spec.Namespace, &metav1.DeleteOptions{}); err != nil {
+							fmt.Printf("Error deleting cluster namespace %s %s", cluster.Spec.Namespace, err.Error())
+						}
+					}
 
+				}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				_, ok := oldObj.(*nrpapi.Cluster)
@@ -149,7 +165,7 @@ func GetCrd() {
 
 
 	_, clusterNSController := cache.NewInformer(
-		clustnscrdclient.NewListWatch(),
+		clustnscrdclient.NewListWatch(""),
 		&nrpapi.ClusterNamespace{},
 		time.Minute*1,
 		cache.ResourceEventHandlerFuncs{

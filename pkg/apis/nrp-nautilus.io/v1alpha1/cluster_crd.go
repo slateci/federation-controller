@@ -115,10 +115,10 @@ func (f *ClusterCrdClient) Get(name string) (*Cluster, error) {
 	return &result, err
 }
 
-func (f *ClusterCrdClient) List(opts meta_v1.ListOptions) (*ClusterList, error) {
+func (f *ClusterCrdClient) List(namespace string, opts meta_v1.ListOptions) (*ClusterList, error) {
 	var result ClusterList
 	err := f.cl.Get().
-		Namespace(f.ns).Resource(f.plural).
+		Namespace(namespace).Resource(f.plural).
 		VersionedParams(&opts, f.codec).
 		Do().Into(&result)
 	return &result, err
