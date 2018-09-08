@@ -6,6 +6,8 @@ The problem solved by this controller is giving kubernetes cluster admins abilit
 
 Example: cluster_A federates with cluster_B. Admin in cluster_A creates a "cluster_B" object, which triggers autiomatic creation of all needed permissions and credentials. Credentials are then sent to cluster_B admins, and they use those to access cluster_A resources. When needed, deleting all those resources and permissions is as simple as deleting the cluster_B object. Modifying permissions is also trivial and is well described in kubernetes documentation (https://kubernetes.io/docs/reference/access-authn-authz/rbac/, https://kubernetes.io/docs/concepts/policy/pod-security-policy/)
 
+![diagram](Federation.png)
+
 ### Developing
 
 `go get gitlab.com/ucsd-prp/nrp-controller`
