@@ -1,10 +1,10 @@
 # NRP controller
 
-This project provides code for NRP controller - the component allowing federating kubernetes clusters according to internal cluster policies.
+This project provides code for NRP controller - the component allowing to federate kubernetes clusters according to internal cluster policies.
 
-The problem solved by this controller is giving kubernetes cluster admins ability to easily delegate to other clusters permission to deploy to this cluster and access its resources. The set of resources and policies is defined by a cluster role and can vary for different clusters.
+The problem solved by this controller is giving kubernetes cluster admins ability to easily delegate permissions to other clusters to deploy in this cluster and access its resources. The set of resources and policies is defined by a cluster role and can vary for different clusters.
 
-Example: cluster_A federates with cluster_B. Admin in cluster_A creates a "cluster_B" object, which triggers autiomatic creation of all needed permissions and credentials. Credentials are then sent to cluster_B admins, and they use those to access cluster_A resources. When needed, deleting all those resources and permissions is as simple as deleting the cluster_B object. Modifying permissions is also trivial and is well described in kubernetes documentation (https://kubernetes.io/docs/reference/access-authn-authz/rbac/, https://kubernetes.io/docs/concepts/policy/pod-security-policy/)
+Example: cluster_A federates with cluster_B. Admin in cluster_A creates a "cluster_B" CRD object, which triggers autiomatic creation of all needed permissions and credentials. Credentials are then sent to cluster_B admins, and they use those to access cluster_A resources. When needed, deleting all those resources and permissions is as simple as deleting the cluster_B object. Modifying permissions is also trivial and is well described in kubernetes documentation (https://kubernetes.io/docs/reference/access-authn-authz/rbac/, https://kubernetes.io/docs/concepts/policy/pod-security-policy/)
 
 ![diagram](Federation.png)
 
