@@ -32,7 +32,7 @@ Then start the controller:
 
 ### Using
 
-The controller creates 2 [CRDs](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/): 
+The controller defines 2 [CRDs](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/): 
 
 * clusters.nrp-nautilus.io - Each CRD is an external federated cluster (or some other entity needing to federate)
 
