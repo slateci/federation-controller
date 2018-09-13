@@ -8,8 +8,8 @@ The problem solved by this controller is giving kubernetes cluster admins abilit
 
 * Admin in cluster_A creates cluster_B's CRD object, which triggers autiomatic creation of all needed permissions and credentials.
 * Credentials are then sent to cluster_B admins who use the credentials to access cluster_A resources. 
-* When needed, deleting all those resources and permissions is as simple as deleting the cluster_B object. 
-* Modifying permissions is also trivial and is well described in kubernetes documentation [Using RBAC Authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) and [Pod Security Policies](https://kubernetes.io/docs/concepts/policy/pod-security-policy/).
+* All the resources and permissions are removed via deletion of the cluster_B object when no longer needed. 
+* Permissions modification is trivial and is well described in kubernetes documentation [Using RBAC Authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) and [Pod Security Policies](https://kubernetes.io/docs/concepts/policy/pod-security-policy/).
 
 ![diagram](Federation.png)
 
@@ -28,7 +28,7 @@ $ make buildrelease
 
 ### Installation
 
-1. Start the federation role 
+1. Start the federation role: 
    
    Edit the federation-role.yaml file in this repo and apply:
    ```bash
@@ -63,15 +63,15 @@ clusters.nrp-nautilus.io                      2018-09-06T00:50:33Z
 
 The **clusters.nrp-nautilus.io** are cluster-wide.
 
-To federate with another cluster, we create the Cluster CRD object. The controller is watching the cluster objects, and will create the namespace corresponding to the cluster name. If such namespace is already taken, the controller will prepend a number to it. The cluster object will have the spec/namespace field changed to have the name of primary namespace. Inside the namespace it will create a service account with role binding to cluster-federation clusterrole. Once we delete the cluster, the associated namespace and all its contents will be also deleted.
+To federate with another cluster, we create the Cluster CRD object. The controller is watching the cluster objects, and will create the namespace corresponding to the cluster name. If such namespace is already taken, the controller will prepend a number to it. The cluster object will have the spec/namespace field changed to have the name of primary namespace. Inside the namespace it will create a service account with role binding to cluster-federation ClusterRole. Once the cluster is deleted, the associated namespace and all its contents will be also deleted.
 
 [![asciicast](https://asciinema.org/a/BWXytQziditkuW0jAR4reGonx.png)](https://asciinema.org/a/BWXytQziditkuW0jAR4reGonx)
 
-For new service account kubernetes automatically creates a token, which will allow the federated cluster to act as this service account in the current cluster. The account, by default, only has access to its primary namespace. The token can be then added to a config file and securely sent to owners of the federated cluster, providing them access to this cluster according to the cluster-federation role defined by admin.
+For new service account kubernetes automatically creates a token which will allow the federated cluster to act as this service account in the current cluster. By default, the account only has an access to its primary namespace. The token can be then added to a config file and securely sent to the admins of the federated cluster, providing them with an access to this cluster according to the admin-defined cluster-federation role.
 
 [![asciicast](https://asciinema.org/a/ZYIPVyFwqC3SkhnNNMBUmJsdI.png)](https://asciinema.org/a/ZYIPVyFwqC3SkhnNNMBUmJsdI)
 
-To request creation of additional namespaces belonging to the same federated cluster, it can create the "clusternamespace" CRD object in its namespace. The operator will discover the new object and create the corresponding namespace with same service account in it, so that the same token will be valid to access both primary namespace and additional one(s). Deleting the clusternamespace object will result in deletion of the corresponding namespace. Deletion of the cluster object by admin will result in deletion of the primary and all additional namespaces.
+To request a creation of additional namespaces in the same federated cluster, one needs to create a "clusternamespace" CRD object in its namespace. The operator will discover the new object and create the corresponding namespace with same service account in it, so that the same token will be valid to access both primary namespace and any additional ones. Deleting the clusternamespace object will result in deletion of the corresponding namespace. Deletion of the cluster object by admin will result in deletion of the primary and all additional namespaces.
 
 [![asciicast](https://asciinema.org/a/l7pwo4kXPV4XcWYoGfNlAUEat.png)](https://asciinema.org/a/l7pwo4kXPV4XcWYoGfNlAUEat)
 
