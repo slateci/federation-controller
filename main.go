@@ -209,7 +209,7 @@ func GetCrd() {
 					return
 				}
 
-				if err := clientset.CoreV1().Namespaces().Delete(clusterNs.Name, &metav1.DeleteOptions{}); err == nil {
+				if err := clientset.CoreV1().Namespaces().Delete(clusterNs.Name, &metav1.DeleteOptions{}); err != nil {
 					log.Printf("Error deleting namespace for cluster: %s", err.Error())
 					return
 				}
