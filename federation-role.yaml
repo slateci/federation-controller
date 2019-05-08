@@ -6,7 +6,6 @@ rules:
 - apiGroups:
   - "nrp-nautilus.io"
   resources:
-  - clusters
   - clusternamespaces
   verbs:
   - create
@@ -67,14 +66,6 @@ rules:
   - replicationcontrollers/status
   - resourcequotas
   - resourcequotas/status
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - namespaces
   verbs:
   - get
   - list
@@ -198,4 +189,21 @@ rules:
   - list
   - patch
   - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: federation-cluster-global
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - nodes
+  - priorityclasses
+  - storageclasses
+  verbs:
+  - get
+  - list
   - watch
