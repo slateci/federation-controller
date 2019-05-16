@@ -113,6 +113,25 @@ func GetCrd() {
 							}); err != nil {
 								log.Printf("Error creating federation-cluster rolebinding %s", err.Error())
 							}
+							if _, err := clientset.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: cluster.Name,
+								},
+								RoleRef: rbacv1.RoleRef{
+									Kind: "ClusterRole",
+									Name: "federation-cluster-global",
+									APIGroup: "rbac.authorization.k8s.io",
+								},
+								Subjects: []rbacv1.Subject{
+									rbacv1.Subject{
+										Kind: "ServiceAccount",
+										Name: srvAcc.Name,
+										Namespace: clusterns.Name,
+									},
+								},
+							}); err != nil {
+								log.Printf("Error creating federation-cluster-global clusterrolebinding %s", err.Error())
+							}
 
 							cluster.Spec.Namespace = clusterns.Name
 							if _, err := clustcrdclient.Update(cluster); err != nil {
