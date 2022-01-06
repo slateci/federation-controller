@@ -1,19 +1,19 @@
 package main
 
 import (
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"time"
 	"k8s.io/client-go/tools/cache"
 	"log"
-	rbacv1 "k8s.io/api/rbac/v1"
+	"time"
 
-	nrpapi "gitlab.com/ucsd-prp/nrp-controller/pkg/apis/nrp-nautilus.io/v1alpha1"
+	nrpapi "github.com/slateci/nrp-clone/pkg/apis/nrp-nautilus.io/v1alpha1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/api/core/v1"
 	"fmt"
+	"k8s.io/api/core/v1"
 )
 
 var clientset *kubernetes.Clientset
@@ -41,7 +41,7 @@ func main() {
 		log.Printf("Error creating client: %s", err.Error())
 	}
 
-	go func(){
+	go func() {
 		GetCrd()
 	}()
 
@@ -91,7 +91,7 @@ func GetCrd() {
 					}); err == nil {
 						if srvAcc, err := clientset.CoreV1().ServiceAccounts(clusterns.Name).Create(&v1.ServiceAccount{
 							ObjectMeta: metav1.ObjectMeta{
-								Name: cluster.Name,
+								Name:      cluster.Name,
 								Namespace: clusterns.Name,
 							},
 						}); err == nil {
@@ -100,8 +100,8 @@ func GetCrd() {
 									Name: cluster.Name,
 								},
 								RoleRef: rbacv1.RoleRef{
-									Kind: "ClusterRole",
-									Name: "federation-cluster",
+									Kind:     "ClusterRole",
+									Name:     "federation-cluster",
 									APIGroup: "rbac.authorization.k8s.io",
 								},
 								Subjects: []rbacv1.Subject{
@@ -118,14 +118,14 @@ func GetCrd() {
 									Name: cluster.Name,
 								},
 								RoleRef: rbacv1.RoleRef{
-									Kind: "ClusterRole",
-									Name: "federation-cluster-global",
+									Kind:     "ClusterRole",
+									Name:     "federation-cluster-global",
 									APIGroup: "rbac.authorization.k8s.io",
 								},
 								Subjects: []rbacv1.Subject{
 									rbacv1.Subject{
-										Kind: "ServiceAccount",
-										Name: srvAcc.Name,
+										Kind:      "ServiceAccount",
+										Name:      srvAcc.Name,
 										Namespace: clusterns.Name,
 									},
 								},
@@ -182,7 +182,6 @@ func GetCrd() {
 		},
 	)
 
-
 	_, clusterNSController := cache.NewInformer(
 		clustnscrdclient.NewListWatch(""),
 		&nrpapi.ClusterNamespace{},
@@ -204,14 +203,14 @@ func GetCrd() {
 							Name: clusterNs.Name,
 						},
 						RoleRef: rbacv1.RoleRef{
-							Kind: "ClusterRole",
-							Name: "federation-cluster",
+							Kind:     "ClusterRole",
+							Name:     "federation-cluster",
 							APIGroup: "rbac.authorization.k8s.io",
 						},
 						Subjects: []rbacv1.Subject{
 							rbacv1.Subject{
-								Kind: "ServiceAccount",
-								Name: clusterNs.Namespace,
+								Kind:      "ServiceAccount",
+								Name:      clusterNs.Namespace,
 								Namespace: clusterNs.Namespace,
 							},
 						},
