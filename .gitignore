@@ -28,4 +28,4 @@ _testmain.go
 pkg/client
 vendor
 Gopkg.lock
-pkg/apis/nrp-nautilus\.io/v1alpha1/zz_generated\.deepcopy\.go
+pkg/apis/nrpapi/v1alpha1/zz_generated\.deepcopy\.go

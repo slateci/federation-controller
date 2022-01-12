@@ -1,19 +1,23 @@
 package main
 
 import (
+	"context"
+	"log"
+	"time"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"log"
-	"time"
 
-	nrpapi "github.com/slateci/nrp-clone/pkg/apis/nrp-nautilus.io/v1alpha1"
+	nrpapi "nrp-clone/pkg/apis/nrpapi/v1alpha1"
+
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"fmt"
-	"k8s.io/api/core/v1"
+
+	v1 "k8s.io/api/core/v1"
 )
 
 var clientset *kubernetes.Clientset
@@ -21,6 +25,8 @@ var clustcrdclient *nrpapi.ClusterCrdClient
 var clustnscrdclient *nrpapi.ClusterNSCrdClient
 
 func main() {
+	ctx := context.Background()
+
 	k8sconfig, err := rest.InClusterConfig()
 	if err != nil {
 		log.Fatal("Failed to do inclusterconfig: " + err.Error())
@@ -42,14 +48,14 @@ func main() {
 	}
 
 	go func() {
-		GetCrd()
+		GetCrd(ctx)
 	}()
 
 	select {}
 
 }
 
-func GetCrd() {
+func GetCrd(ctx context.Context) {
 	k8sconfig, err := rest.InClusterConfig()
 	if err != nil {
 		log.Fatal("Failed to do inclusterconfig: " + err.Error())
@@ -69,7 +75,7 @@ func GetCrd() {
 		log.Printf("Error creating CRD: %s", err.Error())
 	}
 
-	// Wait for the CRD to be created before we use it (only needed if its a new one)
+	// Wait for the CRD to be created before we use it (only needed if it's a new one)
 	time.Sleep(3 * time.Second)
 
 	_, clusterController := cache.NewInformer(
@@ -85,18 +91,18 @@ func GetCrd() {
 				}
 				if cluster.Spec.Namespace == "" {
 					if clusterns, err := clientset.CoreV1().Namespaces().Create(&v1.Namespace{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: findFreeNamespace(cluster.Name),
+						ObjectMeta: metaV1.ObjectMeta{
+							Name: findFreeNamespace(ctx, cluster.Name),
 						},
 					}); err == nil {
 						if srvAcc, err := clientset.CoreV1().ServiceAccounts(clusterns.Name).Create(&v1.ServiceAccount{
-							ObjectMeta: metav1.ObjectMeta{
+							ObjectMeta: metaV1.ObjectMeta{
 								Name:      cluster.Name,
 								Namespace: clusterns.Name,
 							},
 						}); err == nil {
 							if _, err := clientset.RbacV1().RoleBindings(clusterns.Name).Create(&rbacv1.RoleBinding{
-								ObjectMeta: metav1.ObjectMeta{
+								ObjectMeta: metaV1.ObjectMeta{
 									Name: cluster.Name,
 								},
 								RoleRef: rbacv1.RoleRef{
@@ -114,7 +120,7 @@ func GetCrd() {
 								log.Printf("Error creating federation-cluster rolebinding %s", err.Error())
 							}
 							if _, err := clientset.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
-								ObjectMeta: metav1.ObjectMeta{
+								ObjectMeta: metaV1.ObjectMeta{
 									Name: cluster.Name,
 								},
 								RoleRef: rbacv1.RoleRef{
@@ -154,13 +160,13 @@ func GetCrd() {
 					return
 				}
 				if cluster.Spec.Namespace != "" {
-					if clusterNamespaces, err := clustnscrdclient.List(cluster.Spec.Namespace, metav1.ListOptions{}); err == nil {
+					if clusterNamespaces, err := clustnscrdclient.List(cluster.Spec.Namespace, metaV1.ListOptions{}); err == nil {
 						for _, clusterNs := range clusterNamespaces.Items {
-							if err := clientset.CoreV1().Namespaces().Delete(clusterNs.Name, &metav1.DeleteOptions{}); err != nil {
+							if err := clientset.CoreV1().Namespaces().Delete(clusterNs.Name, &metaV1.DeleteOptions{}); err != nil {
 								fmt.Printf("Error deleting clusternamespace %s %s", clusterNs.Name, err.Error())
 							}
 						}
-						if err := clientset.CoreV1().Namespaces().Delete(cluster.Spec.Namespace, &metav1.DeleteOptions{}); err != nil {
+						if err := clientset.CoreV1().Namespaces().Delete(cluster.Spec.Namespace, &metaV1.DeleteOptions{}); err != nil {
 							fmt.Printf("Error deleting cluster namespace %s %s", cluster.Spec.Namespace, err.Error())
 						}
 					}
@@ -194,12 +200,12 @@ func GetCrd() {
 					return
 				}
 				if clusterns, err := clientset.CoreV1().Namespaces().Create(&v1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
+					ObjectMeta: metaV1.ObjectMeta{
 						Name: clusterNs.Name,
 					},
 				}); err == nil {
 					clientset.RbacV1().RoleBindings(clusterns.Name).Create(&rbacv1.RoleBinding{
-						ObjectMeta: metav1.ObjectMeta{
+						ObjectMeta: metaV1.ObjectMeta{
 							Name: clusterNs.Name,
 						},
 						RoleRef: rbacv1.RoleRef{
@@ -227,7 +233,7 @@ func GetCrd() {
 					return
 				}
 
-				if err := clientset.CoreV1().Namespaces().Delete(clusterNs.Name, &metav1.DeleteOptions{}); err != nil {
+				if err := clientset.CoreV1().Namespaces().Delete(clusterNs.Name, &metaV1.DeleteOptions{}); err != nil {
 					log.Printf("Error deleting namespace for cluster: %s", err.Error())
 					return
 				}
@@ -255,14 +261,18 @@ func GetCrd() {
 	select {}
 }
 
-func findFreeNamespace(pattern string) string {
-	if _, err := clientset.CoreV1().Namespaces().Get(pattern, metav1.GetOptions{}); err != nil {
+func findFreeNamespace(ctx context.Context, pattern string) string {
+	timeout1, cancel1 := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel1()
+	if _, err := clientset.CoreV1().Namespaces().Get(timeout1, pattern, metaV1.GetOptions{}); err != nil {
 		return pattern
 	}
 	num := 0
 	tryName := fmt.Sprintf("%s-%d", pattern, num)
 	var err error = nil
-	for ; err != nil; _, err = clientset.CoreV1().Namespaces().Get(tryName, metav1.GetOptions{}) {
+	timeout2, cancel2 := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel2()
+	for ; err != nil; _, err = clientset.CoreV1().Namespaces().Get(timeout2, tryName, metaV1.GetOptions{}) {
 		num += 1
 		tryName = fmt.Sprintf("%s-%d", pattern, num)
 	}
