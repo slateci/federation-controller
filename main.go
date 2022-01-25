@@ -98,7 +98,7 @@ var clusterControllerHandlers = cache.ResourceEventHandlerFuncs{
 			}
 
 			cluster.Spec.Namespace = clusterns.Name
-			if _, err := clustcrdclient.Update(todoCtx, cluster); err != nil {
+			if _, err := clustcrdclient.Update(cluster); err != nil {
 				log.Printf("Error updating cluster %s ns %s", cluster.Name, err.Error())
 			}
 		}
@@ -252,7 +252,7 @@ func GetCrd(ctx context.Context) {
 		panic(err.Error())
 	}
 
-	if err := nrpapi.CreateClusterCRD(ctx, crdclientset); err != nil {
+	if err := nrpapi.CreateClusterCRD(crdclientset); err != nil {
 		log.Printf("Error creating CRD: %s", err.Error())
 	}
 
