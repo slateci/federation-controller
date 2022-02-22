@@ -35,5 +35,7 @@ spec:
       serviceAccountName: nrp-controller
       containers:
       - name: nrp-controller
-        image: registry.gitlab.com/ucsd-prp/nrp-controller
+        image: docker.io/ssthapa/nrp-controller:0.1
         imagePullPolicy: Always
+
+
