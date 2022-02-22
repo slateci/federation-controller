@@ -27,6 +27,9 @@ metadata:
   namespace: kube-system
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nrp-controller
   template:
     metadata:
       labels:
@@ -37,5 +40,6 @@ spec:
       - name: nrp-controller
         image: docker.io/ssthapa/nrp-controller:0.1
         imagePullPolicy: Always
+
 
 
