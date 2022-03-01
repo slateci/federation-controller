@@ -40,13 +40,14 @@ $ make buildrelease
    Or apply it from web if standard admin role is fine:
 
    ```bash
-   $ kubectl apply -f https://gitlab.com/ucsd-prp/nrp-controller/raw/master/federation-role.yaml
+   $ kubectl apply -f    $ kubectl apply -f https://gitlab.com/ucsd-prp/nrp-controller/raw/master/federation-role.yaml
+
    ```
 
 2. Start the controller:
 
    ```bash
-   $ kubectl apply -f https://gitlab.com/ucsd-prp/nrp-controller/raw/master/deploy.yaml
+   $ kubectl apply -f https://raw.githubusercontent.com/slateci/nrp-clone/main/deploy.yaml
    ```
 
 ### Using
