@@ -16,12 +16,13 @@ import (
 
 const (
 	ClusterNSCRDPlural   string = "clusternamespaces"
-	ClusterNSCRDGroup    string = "nrp-nautilus.io"
+	ClusterNSCRDGroup    string = "nrpapi"
 	ClusterNSCRDVersion  string = "v1alpha1"
 	ClusterNSFullCRDName string = ClusterNSCRDPlural + "." + ClusterNSCRDGroup
 )
 
 // Create the CRD resource, ignore error if it already exists
+
 func CreateNSCRD(ctx context.Context, clientset apiextcs.Interface) error {
 	crd := &apiextv1beta1.CustomResourceDefinition{
 		ObjectMeta: meta_v1.ObjectMeta{Name: ClusterNSFullCRDName},
@@ -78,6 +79,7 @@ func MakeClusterNSCrdClient(cl *rest.RESTClient, scheme *runtime.Scheme) *Cluste
 }
 
 // +k8s:deepcopy-gen=false
+
 type ClusterNSCrdClient struct {
 	cl     *rest.RESTClient
 	plural string
@@ -117,12 +119,6 @@ func (f *ClusterNSCrdClient) Get(ctx context.Context, name string, namespace str
 
 func (f *ClusterNSCrdClient) List(ctx context.Context, namespace string, opts meta_v1.ListOptions) (*ClusterNamespaceList, error) {
 	var result ClusterNamespaceList
-	temp := f.cl.Get().
-		Namespace(namespace).Resource(f.plural).
-		VersionedParams(&opts, f.codec).
-		Do(ctx)
-	foo := temp.Into()
-
 	err := f.cl.Get().
 		Namespace(namespace).Resource(f.plural).
 		VersionedParams(&opts, f.codec).
@@ -131,6 +127,7 @@ func (f *ClusterNSCrdClient) List(ctx context.Context, namespace string, opts me
 }
 
 // Create a new List watch for our TPR
+
 func (f *ClusterNSCrdClient) NewListWatch(namespace string) *cache.ListWatch {
 	return cache.NewListWatchFromClient(f.cl, f.plural, namespace, fields.Everything())
 }

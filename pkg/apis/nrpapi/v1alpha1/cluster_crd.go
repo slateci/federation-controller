@@ -17,12 +17,13 @@ import (
 
 const (
 	ClusterCRDPlural   string = "clusters"
-	ClusterCRDGroup    string = "nrp-nautilus.io"
+	ClusterCRDGroup    string = "nrpapi"
 	ClusterCRDVersion  string = "v1alpha1"
 	FullClusterCRDName string = ClusterCRDPlural + "." + ClusterCRDGroup
 )
 
 // Create the CRD resource, ignore error if it already exists
+
 func CreateClusterCRD(ctx context.Context, clientset apiextcs.Interface) error {
 	crd := &apiextv1beta1.CustomResourceDefinition{
 		ObjectMeta: metaV1.ObjectMeta{Name: FullClusterCRDName},
@@ -80,6 +81,7 @@ func MakeClusterCrdClient(cl *rest.RESTClient, scheme *runtime.Scheme, namespace
 }
 
 // +k8s:deepcopy-gen=false
+
 type ClusterCrdClient struct {
 	cl     *rest.RESTClient
 	ns     string
@@ -140,6 +142,7 @@ func (f *ClusterCrdClient) List(ctx context.Context, namespace string, opts meta
 }
 
 // Create a new List watch for our TPR
+
 func (f *ClusterCrdClient) NewListWatch() *cache.ListWatch {
 	return cache.NewListWatchFromClient(f.cl, f.plural, f.ns, fields.Everything())
 }
