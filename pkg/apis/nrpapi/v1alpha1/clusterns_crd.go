@@ -2,6 +2,8 @@ package v1alpha1
 
 import (
 	"context"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"reflect"
 
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -62,10 +64,8 @@ func NewClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
 	config.GroupVersion = &SchemeGroupVersion
 	config.APIPath = "/apis"
 	config.ContentType = runtime.ContentTypeJSON
-	// NegotiatedSerializer is not used
-	//config.NegotiatedSerializer = serializer.DirectCodecFactory{
-	//	CodecFactory: serializer.NewCodecFactory(scheme)}
-
+	codec := runtime.NoopEncoder{Decoder: apiserver.Codecs.UniversalDecoder()}
+	config.NegotiatedSerializer = serializer.NegotiatedSerializerWrapper(runtime.SerializerInfo{Serializer: codec})
 	client, err := rest.RESTClientFor(&config)
 	if err != nil {
 		return nil, nil, err

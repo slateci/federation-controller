@@ -39,7 +39,7 @@ spec:
       serviceAccountName: nrp-controller
       containers:
       - name: nrp-controller
-        image: docker.io/ssthapa/nrp-controller:0.1
+        image: docker.io/ssthapa/nrp-controller:0.1.3
         imagePullPolicy: Always
 
 
