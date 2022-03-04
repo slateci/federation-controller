@@ -1,10 +1,10 @@
 package v1alpha1
 
 import (
-	"github.com/slateci/nrp-clone/pkg/apis/nrpapi"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"log"
 )
 
 var (
@@ -13,8 +13,8 @@ var (
 	AddToScheme        = SchemeBuilder.AddToScheme
 )
 
-// schemeGroupVersion is group version used to register these objects
-var SchemeGroupVersion = schema.GroupVersion{Group: nrpapi.GroupName, Version: "v1alpha1"}
+// SchemeGroupVersion is group version used to register these objects
+var SchemeGroupVersion = schema.GroupVersion{Group: "nrp-nautilus.io", Version: "v1alpha1"}
 
 // Kind takes an unqualified kind and returns back a Group qualified GroupKind
 func Kind(kind string) schema.GroupKind {
@@ -35,6 +35,7 @@ func Resource(resource string) schema.GroupResource {
 
 // Adds the list of known types to api.Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
+	log.Printf("Registering schema as : %s", SchemeGroupVersion)
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&Cluster{},
 		&ClusterList{},

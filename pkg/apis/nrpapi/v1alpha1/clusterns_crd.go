@@ -6,10 +6,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"reflect"
 
-	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -18,7 +18,7 @@ import (
 
 const (
 	ClusterNSCRDPlural   string = "clusternamespaces"
-	ClusterNSCRDGroup    string = "nrpapi"
+	ClusterNSCRDGroup    string = "nrp-nautilus.io"
 	ClusterNSCRDVersion  string = "v1alpha1"
 	ClusterNSFullCRDName string = ClusterNSCRDPlural + "." + ClusterNSCRDGroup
 )
@@ -26,32 +26,45 @@ const (
 // Create the CRD resource, ignore error if it already exists
 
 func CreateNSCRD(ctx context.Context, clientset apiextcs.Interface) error {
-	crd := &apiextv1beta1.CustomResourceDefinition{
-		ObjectMeta: meta_v1.ObjectMeta{Name: ClusterNSFullCRDName},
-		Spec: apiextv1beta1.CustomResourceDefinitionSpec{
+	crd := apiextv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: ClusterNSFullCRDName},
+		Spec: apiextv1.CustomResourceDefinitionSpec{
 			Group: ClusterNSCRDGroup,
-			Versions: []apiextv1beta1.CustomResourceDefinitionVersion{
+			Versions: []apiextv1.CustomResourceDefinitionVersion{
 				{
 					Name:    ClusterNSCRDVersion,
 					Served:  true,
 					Storage: true,
+					Schema: &apiextv1.CustomResourceValidation{
+						OpenAPIV3Schema: &apiextv1.JSONSchemaProps{
+							Type: "object",
+							Properties: map[string]apiextv1.JSONSchemaProps{
+								"spec": {
+									Type: "object",
+									Properties: map[string]apiextv1.JSONSchemaProps{
+										"organization": {Type: "string", Format: "str"},
+										"namespace":    {Type: "string", Format: "str"},
+									},
+									Required: []string{"organization", "namespace"},
+								},
+							},
+						},
+					},
 				},
 			},
-			Scope: apiextv1beta1.NamespaceScoped,
-			Names: apiextv1beta1.CustomResourceDefinitionNames{
+			Scope: apiextv1.NamespaceScoped,
+			Names: apiextv1.CustomResourceDefinitionNames{
 				Plural: ClusterNSCRDPlural,
 				Kind:   reflect.TypeOf(ClusterNamespace{}).Name(),
 			},
 		},
 	}
 
-	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(ctx, crd, meta_v1.CreateOptions{})
+	_, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Create(ctx, &crd, metav1.CreateOptions{})
 	if err != nil && apierrors.IsAlreadyExists(err) {
 		return nil
 	}
 	return err
-
-	// Note the original apiextensions example adds logic to wait for creation and exception handling
 }
 
 func NewClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
@@ -102,7 +115,7 @@ func (f *ClusterNSCrdClient) Update(ctx context.Context, obj *ClusterNamespace) 
 	return &result, err
 }
 
-func (f *ClusterNSCrdClient) Delete(ctx context.Context, name string, namespace string, options *meta_v1.DeleteOptions) error {
+func (f *ClusterNSCrdClient) Delete(ctx context.Context, name string, namespace string, options *metav1.DeleteOptions) error {
 	return f.cl.Delete().
 		Namespace(namespace).Resource(f.plural).
 		Name(name).Body(options).Do(ctx).
@@ -117,7 +130,7 @@ func (f *ClusterNSCrdClient) Get(ctx context.Context, name string, namespace str
 	return &result, err
 }
 
-func (f *ClusterNSCrdClient) List(ctx context.Context, namespace string, opts meta_v1.ListOptions) (*ClusterNamespaceList, error) {
+func (f *ClusterNSCrdClient) List(ctx context.Context, namespace string, opts metav1.ListOptions) (*ClusterNamespaceList, error) {
 	var result ClusterNamespaceList
 	err := f.cl.Get().
 		Namespace(namespace).Resource(f.plural).

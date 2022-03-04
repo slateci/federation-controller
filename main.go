@@ -210,7 +210,7 @@ var clusterNSControllerHandlers = cache.ResourceEventHandlerFuncs{
 }
 
 func main() {
-	log.Println("Starting nrp-clone controller v0.1.3")
+	log.Println("Starting nrp-clone controller v0.1.7")
 	ctx := context.Background()
 
 	k8sconfig, err := rest.InClusterConfig()
@@ -223,6 +223,7 @@ func main() {
 	log.Println("creating CRD ")
 	crdcs, scheme, err := nrpapi.NewClient(k8sconfig)
 	if err != nil {
+		log.Printf("Error creating CRD client: %s", err.Error())
 		log.Printf("Error creating CRD client: %s", err.Error())
 	}
 

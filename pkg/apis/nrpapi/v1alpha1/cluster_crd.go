@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"time"
 
-	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +17,7 @@ import (
 
 const (
 	ClusterCRDPlural   string = "clusters"
-	ClusterCRDGroup    string = "nrpapi"
+	ClusterCRDGroup    string = "nrp-nautilus.io"
 	ClusterCRDVersion  string = "v1alpha1"
 	FullClusterCRDName string = ClusterCRDPlural + "." + ClusterCRDGroup
 )
@@ -25,19 +25,34 @@ const (
 // Create the CRD resource, ignore error if it already exists
 
 func CreateClusterCRD(ctx context.Context, clientset apiextcs.Interface) error {
-	crd := &apiextv1beta1.CustomResourceDefinition{
+	crd := apiextv1.CustomResourceDefinition{
 		ObjectMeta: metaV1.ObjectMeta{Name: FullClusterCRDName},
-		Spec: apiextv1beta1.CustomResourceDefinitionSpec{
+		Spec: apiextv1.CustomResourceDefinitionSpec{
 			Group: ClusterCRDGroup,
-			Versions: []apiextv1beta1.CustomResourceDefinitionVersion{
+			Versions: []apiextv1.CustomResourceDefinitionVersion{
 				{
 					Name:    ClusterCRDVersion,
 					Served:  true,
 					Storage: true,
+					Schema: &apiextv1.CustomResourceValidation{
+						OpenAPIV3Schema: &apiextv1.JSONSchemaProps{
+							Type: "object",
+							Properties: map[string]apiextv1.JSONSchemaProps{
+								"spec": {
+									Type: "object",
+									Properties: map[string]apiextv1.JSONSchemaProps{
+										"organization": {Type: "string", Format: "str"},
+										"namespace":    {Type: "string", Format: "str"},
+									},
+									Required: []string{"organization", "namespace"},
+								},
+							},
+						},
+					},
 				},
 			},
-			Scope: apiextv1beta1.ClusterScoped,
-			Names: apiextv1beta1.CustomResourceDefinitionNames{
+			Scope: apiextv1.ClusterScoped,
+			Names: apiextv1.CustomResourceDefinitionNames{
 				Plural: ClusterCRDPlural,
 				Kind:   reflect.TypeOf(Cluster{}).Name(),
 			},
@@ -45,7 +60,7 @@ func CreateClusterCRD(ctx context.Context, clientset apiextcs.Interface) error {
 	}
 
 	opts := metaV1.CreateOptions{}
-	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(ctx, crd, opts)
+	_, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Create(ctx, &crd, opts)
 	if err != nil && apierrors.IsAlreadyExists(err) {
 		return nil
 	}
