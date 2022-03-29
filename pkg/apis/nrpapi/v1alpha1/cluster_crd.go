@@ -2,6 +2,8 @@ package v1alpha1
 
 import (
 	"context"
+	v1 "k8s.io/api/core/v1"
+	"log"
 	"reflect"
 	"time"
 
@@ -146,18 +148,23 @@ func (f *ClusterCrdClient) Get(ctx context.Context, name string) (*Cluster, erro
 }
 
 func (f *ClusterCrdClient) List(ctx context.Context, namespace string, opts metaV1.ListOptions) (*ClusterList, error) {
+	log.Println("List func")
 	var result ClusterList
 	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	log.Println("Get")
 	err := f.cl.Get().
 		Namespace(namespace).Resource(f.plural).
 		VersionedParams(&opts, f.codec).
 		Do(reqCtx).Into(&result)
+	log.Println("Get Done")
 	return &result, err
 }
 
 // Create a new List watch for our TPR
 
 func (f *ClusterCrdClient) NewListWatch() *cache.ListWatch {
-	return cache.NewListWatchFromClient(f.cl, f.plural, f.ns, fields.Everything())
+	log.Println("NewListWatch from cache")
+	//return cache.NewListWatchFromClient(f.cl, f.plural, f.ns, fields.Everything())
+	return cache.NewListWatchFromClient(f.cl, f.plural, v1.NamespaceAll, fields.Everything())
 }

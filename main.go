@@ -26,6 +26,7 @@ var clustnscrdclient *nrpapi.ClusterNSCrdClient
 
 var clusterControllerHandlers = cache.ResourceEventHandlerFuncs{
 	AddFunc: func(obj interface{}) {
+		log.Println("Cluster Handler Add")
 		cluster, ok := obj.(*nrpapi.Cluster)
 		if !ok {
 			log.Printf("Expected Cluster but other received %#v", obj)
@@ -126,6 +127,7 @@ var clusterControllerHandlers = cache.ResourceEventHandlerFuncs{
 		}
 	},
 	UpdateFunc: func(oldObj, newObj interface{}) {
+		log.Println("Cluster Handler Update")
 		_, ok := oldObj.(*nrpapi.Cluster)
 		if !ok {
 			log.Printf("Expected Cluster but other received %#v", oldObj)
@@ -141,6 +143,7 @@ var clusterControllerHandlers = cache.ResourceEventHandlerFuncs{
 
 var clusterNSControllerHandlers = cache.ResourceEventHandlerFuncs{
 	AddFunc: func(obj interface{}) {
+		log.Println("ClusterNS Handler Add")
 		clusterNs, ok := obj.(*nrpapi.ClusterNamespace)
 
 		if !ok {
@@ -196,6 +199,7 @@ var clusterNSControllerHandlers = cache.ResourceEventHandlerFuncs{
 		}
 	},
 	UpdateFunc: func(oldObj, newObj interface{}) {
+		log.Println("ClusterNS Handler Update")
 		_, ok := oldObj.(*nrpapi.ClusterNamespace)
 		if !ok {
 			log.Printf("Expected Cluster but other received %#v", oldObj)
@@ -210,7 +214,7 @@ var clusterNSControllerHandlers = cache.ResourceEventHandlerFuncs{
 }
 
 func main() {
-	log.Println("Starting nrp-clone controller v0.1.7")
+	log.Println("Starting nrp-clone controller v0.1.13")
 	ctx := context.Background()
 
 	k8sconfig, err := rest.InClusterConfig()
@@ -236,6 +240,7 @@ func main() {
 	}
 
 	go func() {
+		log.Print("Getting CRD")
 		GetCrd(ctx)
 	}()
 
@@ -249,7 +254,7 @@ func GetCrd(ctx context.Context) {
 		log.Fatal("Failed to do inclusterconfig: " + err.Error())
 		return
 	}
-
+	log.Println("newForConfig")
 	crdclientset, err := apiextcs.NewForConfig(k8sconfig)
 	if err != nil {
 		panic(err.Error())
@@ -257,17 +262,23 @@ func GetCrd(ctx context.Context) {
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	log.Println("CreateClusterCRD")
 	if err := nrpapi.CreateClusterCRD(timeoutCtx, crdclientset); err != nil {
 		log.Printf("Error creating CRD: %s", err.Error())
 	}
-
+	log.Println("CreateNSCRD")
 	if err := nrpapi.CreateNSCRD(ctx, crdclientset); err != nil {
 		log.Printf("Error creating CRD: %s", err.Error())
 	}
 
+	//if err := nrpapi.CreateNSListCRD(ctx, crdclientset); err != nil {
+	//	log.Printf("Error creating CRD: %s", err.Error())
+	//}
+
 	// Wait for the CRD to be created before we use it (only needed if it's a new one)
 	time.Sleep(3 * time.Second)
 
+	log.Println("NewListWatch Cluster")
 	_, clusterController := cache.NewInformer(
 		clustcrdclient.NewListWatch(),
 		&nrpapi.Cluster{},
@@ -275,17 +286,19 @@ func GetCrd(ctx context.Context) {
 		clusterControllerHandlers,
 	)
 
-	_, clusterNSController := cache.NewInformer(
-		clustnscrdclient.NewListWatch(""),
-		&nrpapi.ClusterNamespace{},
-		time.Minute*1,
-		clusterNSControllerHandlers,
-	)
+	//log.Println("NewListWatch NS")
+	//_, clusterNSController := cache.NewInformer(
+	//	clustnscrdclient.NewListWatch(""),
+	//	&nrpapi.ClusterNamespace{},
+	//	time.Minute*1,
+	//	clusterNSControllerHandlers,
+	//)
 
 	stop := make(chan struct{})
 	go clusterController.Run(stop)
-	go clusterNSController.Run(stop)
+	//go clusterNSController.Run(stop)
 
+	log.Println("looking for controllers")
 	// Wait forever
 	select {}
 }
