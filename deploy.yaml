@@ -41,6 +41,19 @@ spec:
       - name: nrp-controller
         image: localhost/nrp-controller:latest
         imagePullPolicy: Always
-
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nrp-binding
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: nrp-crd-edit
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: nrp-controller
+  namespace: kube-system
 
 

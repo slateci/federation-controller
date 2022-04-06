@@ -2,7 +2,7 @@ package v1alpha1
 
 import (
 	"context"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	"log"
 	"reflect"
 	"time"
@@ -72,11 +72,14 @@ func CreateClusterCRD(ctx context.Context, clientset apiextcs.Interface) error {
 }
 
 func NewClusterClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
+	log.Printf("new cluster client config")
 	scheme := runtime.NewScheme()
 	SchemeBuilder := runtime.NewSchemeBuilder(addKnownTypes)
 	if err := SchemeBuilder.AddToScheme(scheme); err != nil {
 		return nil, nil, err
 	}
+	log.Printf("new cluster config, scheme: %#v", scheme)
+
 	config := *cfg
 	config.GroupVersion = &SchemeGroupVersion
 	config.APIPath = "/apis"
@@ -85,6 +88,7 @@ func NewClusterClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, erro
 	// config.NegotiatedSerializer = serializer.DirectCodecFactory{
 	//	CodecFactory: serializer.NewCodecFactory(scheme)}
 
+	log.Printf("config: %#v", config)
 	client, err := rest.RESTClientFor(&config)
 	if err != nil {
 		return nil, nil, err
@@ -93,8 +97,12 @@ func NewClusterClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, erro
 }
 
 func MakeClusterCrdClient(cl *rest.RESTClient, scheme *runtime.Scheme, namespace string) *ClusterCrdClient {
-	return &ClusterCrdClient{cl: cl, ns: namespace, plural: ClusterCRDPlural,
-		codec: runtime.NewParameterCodec(scheme)}
+	return &ClusterCrdClient{
+		cl:     cl,
+		ns:     namespace,
+		plural: ClusterCRDPlural,
+		codec:  runtime.NewParameterCodec(scheme),
+	}
 }
 
 // +k8s:deepcopy-gen=false
@@ -141,9 +149,13 @@ func (f *ClusterCrdClient) Get(ctx context.Context, name string) (*Cluster, erro
 	var result Cluster
 	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	err := f.cl.Get().
-		Namespace(f.ns).Resource(f.plural).
-		Name(name).Do(reqCtx).Into(&result)
+	err := f.cl.
+		Get().
+		Namespace(f.ns).
+		Resource(f.plural).
+		Name(name).
+		Do(reqCtx).
+		Into(&result)
 	return &result, err
 }
 
@@ -152,19 +164,36 @@ func (f *ClusterCrdClient) List(ctx context.Context, namespace string, opts meta
 	var result ClusterList
 	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	log.Println("Get")
+	log.Println("List")
 	err := f.cl.Get().
-		Namespace(namespace).Resource(f.plural).
+		Namespace(namespace).
+		Resource(f.plural).
 		VersionedParams(&opts, f.codec).
-		Do(reqCtx).Into(&result)
-	log.Println("Get Done")
+		Do(reqCtx).
+		Into(&result)
+	log.Println("List Done")
 	return &result, err
+}
+
+func (f *ClusterCrdClient) Watch(ctx context.Context, namespace string, opts metaV1.ListOptions) (watch.Interface, error) {
+	opts.Watch = true
+	log.Println("Watch func")
+	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	log.Println("Watch")
+	return f.cl.
+		Get().
+		Namespace(namespace).
+		Resource(f.plural).
+		VersionedParams(&opts, f.codec).
+		Watch(reqCtx)
 }
 
 // Create a new List watch for our TPR
 
 func (f *ClusterCrdClient) NewListWatch() *cache.ListWatch {
-	log.Println("NewListWatch from cache")
-	//return cache.NewListWatchFromClient(f.cl, f.plural, f.ns, fields.Everything())
-	return cache.NewListWatchFromClient(f.cl, f.plural, v1.NamespaceAll, fields.Everything())
+	log.Println("NewListWatch from client")
+	return cache.NewListWatchFromClient(f.cl, f.plural, f.ns, fields.Everything())
+	//return cache.NewListWatchFromClient(f.cl, f.plural, v1.NamespaceAll, fields.Everything())
+	//return cache.NewListWatchFromClient(f.cl, f.plural, v1.NamespaceAll, fields.Everything())
 }

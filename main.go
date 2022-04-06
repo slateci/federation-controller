@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apimachinery/pkg/watch"
 	"log"
 	"time"
 
@@ -105,6 +108,7 @@ var clusterControllerHandlers = cache.ResourceEventHandlerFuncs{
 		}
 	},
 	DeleteFunc: func(obj interface{}) {
+		log.Println("Cluster Handler Delete")
 		cluster, ok := obj.(*nrpapi.Cluster)
 		todoCtx := context.TODO()
 
@@ -214,7 +218,7 @@ var clusterNSControllerHandlers = cache.ResourceEventHandlerFuncs{
 }
 
 func main() {
-	log.Println("Starting nrp-clone controller v0.1.13")
+	log.Println("Starting nrp-clone controller v0.1.19")
 	ctx := context.Background()
 
 	k8sconfig, err := rest.InClusterConfig()
@@ -238,6 +242,32 @@ func main() {
 	if err != nil {
 		log.Printf("Error creating client: %s", err.Error())
 	}
+
+	//log.Printf("Testing query")
+	//result := nrpapi.ClusterList{}
+	//testerr := crdcs.
+	//	Get().
+	//	Resource("clusters").
+	//	Do(ctx).
+	//	Into(&result)
+	//if testerr != nil {
+	//	log.Printf("Got error %s", testerr)
+	//}
+	//log.Printf("result: %#v", result)
+	//log.Printf("query tested")
+	//
+	//log.Printf("Testing ns query")
+	//nsresult := nrpapi.ClusterNamespaceList{}
+	//nstesterr := crdcs.
+	//	Get().
+	//	Resource("clusters").
+	//	Do(ctx).
+	//	Into(&result)
+	//if nstesterr != nil {
+	//	log.Printf("Got error %s", testerr)
+	//}
+	//log.Printf("result: %#v", nsresult)
+	//log.Printf("ns query tested")
 
 	go func() {
 		log.Print("Getting CRD")
@@ -268,39 +298,83 @@ func GetCrd(ctx context.Context) {
 	}
 	log.Println("CreateNSCRD")
 	if err := nrpapi.CreateNSCRD(ctx, crdclientset); err != nil {
-		log.Printf("Error creating CRD: %s", err.Error())
+		log.Printf("Error creating NS CRD: %s", err.Error())
 	}
-
-	//if err := nrpapi.CreateNSListCRD(ctx, crdclientset); err != nil {
-	//	log.Printf("Error creating CRD: %s", err.Error())
-	//}
 
 	// Wait for the CRD to be created before we use it (only needed if it's a new one)
 	time.Sleep(3 * time.Second)
 
-	log.Println("NewListWatch Cluster")
+	//log.Printf("clientset test")
+	//clusterList, err := clustcrdclient.List(context.TODO(), "default", metaV1.ListOptions{})
+	//clusterNSList, err := clustnscrdclient.List(context.TODO(), "default", metaV1.ListOptions{})
+	//log.Printf("list: %#v", clusterList)
+	//log.Printf("NS list: %#v", clusterNSList)
+	//log.Printf("clientset test done")
+
+	log.Println("Creating NewListWatch Cluster")
+	//_, clusterController := cache.NewInformer(
+	//	clustcrdclient.NewListWatch(),
+	//	&nrpapi.Cluster{},
+	//	time.Minute*1,
+	//	clusterControllerHandlers,
+	//)
 	_, clusterController := cache.NewInformer(
-		clustcrdclient.NewListWatch(),
+		&cache.ListWatch{
+			ListFunc: func(lo metaV1.ListOptions) (result runtime.Object, err error) {
+				log.Printf("in cluster ListFunc")
+				clusterListCtx, cancel := context.WithCancel(ctx)
+				defer cancel()
+				return clustcrdclient.List(clusterListCtx, "default", lo)
+			},
+			WatchFunc: func(lo metaV1.ListOptions) (watch.Interface, error) {
+				log.Printf("in cluster WatchFunc")
+				clusterWatchCtx, cancel := context.WithCancel(ctx)
+				defer cancel()
+				return clustcrdclient.Watch(clusterWatchCtx, "default", lo)
+			},
+			DisableChunking: true,
+		},
 		&nrpapi.Cluster{},
 		time.Minute*1,
 		clusterControllerHandlers,
 	)
 
-	//log.Println("NewListWatch NS")
-	//_, clusterNSController := cache.NewInformer(
-	//	clustnscrdclient.NewListWatch(""),
-	//	&nrpapi.ClusterNamespace{},
-	//	time.Minute*1,
-	//	clusterNSControllerHandlers,
-	//)
+	log.Println("Creating NewListWatch NS")
+	_, clusterNSController := cache.NewInformer(
+		&cache.ListWatch{
+			ListFunc: func(lo metaV1.ListOptions) (result runtime.Object, err error) {
+				log.Printf("in NS ListFunc")
+				nsListCtx, cancel := context.WithCancel(ctx)
+				defer cancel()
+				return clustnscrdclient.List(nsListCtx, "default", lo)
+			},
+			WatchFunc: func(lo metaV1.ListOptions) (watch.Interface, error) {
+				log.Printf("in NS WatchFunc")
+				nsWatchCtx := context.TODO()
+				//defer cancel()
+				return clustnscrdclient.Watch(nsWatchCtx, "default", lo)
+			},
+			DisableChunking: true,
+		},
+		&nrpapi.ClusterNamespace{},
+		time.Minute*1,
+		clusterNSControllerHandlers,
+	)
 
-	stop := make(chan struct{})
-	go clusterController.Run(stop)
-	//go clusterNSController.Run(stop)
+	go clusterController.Run(wait.NeverStop)
+	go clusterNSController.Run(wait.NeverStop)
 
 	log.Println("looking for controllers")
 	// Wait forever
-	select {}
+	select {
+	case <-ctx.Done():
+		switch ctx.Err() {
+		case context.DeadlineExceeded:
+			fmt.Println("context timeout exceeded")
+		case context.Canceled:
+			fmt.Println("context cancelled by force. whole process is complete")
+		}
+	}
 }
 
 func findFreeNamespace(ctx context.Context, pattern string) string {

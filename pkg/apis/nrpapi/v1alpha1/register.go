@@ -14,19 +14,24 @@ var (
 )
 
 // SchemeGroupVersion is group version used to register these objects
-var SchemeGroupVersion = schema.GroupVersion{Group: "nrp-nautilus.io", Version: "v1alpha1"}
+var SchemeGroupVersion = schema.GroupVersion{
+	Group:   "nrp-nautilus.io",
+	Version: "v1alpha1",
+}
 
 // Kind takes an unqualified kind and returns back a Group qualified GroupKind
 func Kind(kind string) schema.GroupKind {
 	return SchemeGroupVersion.WithKind(kind).GroupKind()
 }
 
-//func init() {
-//	// We only register manually written functions here. The registration of the
-//	// generated functions takes place in the generated files. The separation
-//	// makes the code compile even when the generated files are missing.
-//	localSchemeBuilder.Register(addKnownTypes)
-//}
+func init() {
+	// We only register manually written functions here. The registration of the
+	// generated functions takes place in the generated files. The separation
+	// makes the code compile even when the generated files are missing.
+	log.Printf("init()")
+	localSchemeBuilder.Register(addKnownTypes)
+	log.Printf("init() done")
+}
 
 // Resource takes an unqualified resource and returns back a Group qualified GroupResource
 func Resource(resource string) schema.GroupResource {
@@ -42,7 +47,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ClusterNamespace{},
 		&ClusterNamespaceList{},
 	)
-
+	log.Printf("scheme: %#v", scheme)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
 }

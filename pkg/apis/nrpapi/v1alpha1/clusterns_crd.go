@@ -2,24 +2,24 @@ package v1alpha1
 
 import (
 	"context"
-	"k8s.io/apiextensions-apiserver/pkg/apiserver"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"log"
-	"reflect"
-
+	"k8s.io/api/storage/v1alpha1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/watch"
+	clientscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"log"
+	"reflect"
 )
 
 const (
-	ClusterNSCRDPlural string = "clusternamespaces"
-	//	ClusterNSListCRDPlural   string = "clusternamespacelists"
+	ClusterNSCRDPlural   string = "clusternamespaces"
 	ClusterNSCRDGroup    string = "nrp-nautilus.io"
 	ClusterNSCRDVersion  string = "v1alpha1"
 	ClusterNSFullCRDName string = ClusterNSCRDPlural + "." + ClusterNSCRDGroup
@@ -29,6 +29,7 @@ const (
 // Create the CRD resource, ignore error if it already exists
 
 func CreateNSCRD(ctx context.Context, clientset apiextcs.Interface) error {
+	log.Printf("CreateNSCRD")
 	crd := apiextv1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: ClusterNSFullCRDName},
 		Spec: apiextv1.CustomResourceDefinitionSpec{
@@ -67,6 +68,7 @@ func CreateNSCRD(ctx context.Context, clientset apiextcs.Interface) error {
 	if err != nil && apierrors.IsAlreadyExists(err) {
 		return nil
 	}
+	log.Printf("CreateNSCRD done")
 	return err
 }
 
@@ -113,18 +115,27 @@ func CreateNSCRD(ctx context.Context, clientset apiextcs.Interface) error {
 //}
 
 func NewClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
+	log.Printf("new cluster client config")
 	scheme := runtime.NewScheme()
+	log.Printf("new scheme builder call")
 	SchemeBuilder := runtime.NewSchemeBuilder(addKnownTypes)
 	if err := SchemeBuilder.AddToScheme(scheme); err != nil {
 		return nil, nil, err
 	}
+	log.Printf("new cluster config, scheme: %+v", scheme.KnownTypes(SchemeGroupVersion))
+
 	config := *cfg
 	config.GroupVersion = &SchemeGroupVersion
 	config.APIPath = "/apis"
 	config.ContentType = runtime.ContentTypeJSON
-	codec := runtime.NoopEncoder{Decoder: apiserver.Codecs.UniversalDecoder()}
-	config.NegotiatedSerializer = serializer.NegotiatedSerializerWrapper(runtime.SerializerInfo{Serializer: codec})
-	client, err := rest.RESTClientFor(&config)
+	v1alpha1.AddToScheme(clientscheme.Scheme)
+	//codec := runtime.NoopEncoder{Decoder: apiserver.Codecs.UniversalDecoder()}
+	//config.NegotiatedSerializer = serializer.NegotiatedSerializerWrapper(runtime.SerializerInfo{Serializer: codec})
+	config.NegotiatedSerializer = serializer.NewCodecFactory(clientscheme.Scheme)
+	//client, err := rest.RESTClientFor(&config)
+	client, err := rest.UnversionedRESTClientFor(&config)
+	//log.Printf("config: %+v", config)
+
 	if err != nil {
 		return nil, nil, err
 	}
@@ -177,12 +188,32 @@ func (f *ClusterNSCrdClient) Get(ctx context.Context, name string, namespace str
 }
 
 func (f *ClusterNSCrdClient) List(ctx context.Context, namespace string, opts metav1.ListOptions) (*ClusterNamespaceList, error) {
+	log.Println("NS List func")
 	var result ClusterNamespaceList
-	err := f.cl.Get().
-		Namespace(namespace).Resource(f.plural).
+	err := f.cl.
+		Get().
+		Namespace(namespace).
+		Resource(f.plural).
 		VersionedParams(&opts, f.codec).
-		Do(ctx).Into(&result)
+		Do(ctx).
+		Into(&result)
+	log.Println("NS List func done")
 	return &result, err
+}
+
+func (f *ClusterNSCrdClient) Watch(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	opts.Watch = true
+	log.Println("NS Watch func")
+	//reqCtx, cancel := context.WithCancel(ctx)
+	//defer cancel()
+	reqCtx := context.TODO()
+	log.Println("NS Watch")
+	return f.cl.
+		Get().
+		Namespace(namespace).
+		Resource(f.plural).
+		VersionedParams(&opts, f.codec).
+		Watch(reqCtx)
 }
 
 // Create a new List watch for our TPR
