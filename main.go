@@ -1,396 +1,154 @@
+/*
+Copyright 2017 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
-	"context"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/apimachinery/pkg/watch"
-	"log"
+	"flag"
+	nrpcontrollerv1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha1"
+	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"time"
 
-	rbacv1 "k8s.io/api/rbac/v1"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog/v2"
+	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
+	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	nrpapi "github.com/slateci/nrp-clone/pkg/apis/nrpapi/v1alpha1"
+	//clientset "k8s.io/sample-controller/pkg/generated/clientset/versioned"
+	//informers "k8s.io/sample-controller/pkg/generated/informers/externalversions"
+	//"k8s.io/sample-controller/pkg/signals"
 
-	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"fmt"
-
-	v1 "k8s.io/api/core/v1"
+	clientset "github.com/slateci/nrp-clone/pkg/generated/clientset/versioned"
+	informers "github.com/slateci/nrp-clone/pkg/generated/informers/externalversions"
+	"github.com/slateci/nrp-clone/pkg/signals"
 )
 
-var clientset *kubernetes.Clientset
-var clustcrdclient *nrpapi.ClusterCrdClient
-var clustnscrdclient *nrpapi.ClusterNSCrdClient
+const controllerAgentName = "nrp-controller"
 
-var clusterControllerHandlers = cache.ResourceEventHandlerFuncs{
-	AddFunc: func(obj interface{}) {
-		log.Println("Cluster Handler Add")
-		cluster, ok := obj.(*nrpapi.Cluster)
-		if !ok {
-			log.Printf("Expected Cluster but other received %#v", obj)
-			return
-		}
-		todoCtx := context.TODO()
-
-		if cluster.Spec.Namespace == "" {
-			clusterNamespace := v1.Namespace{
-				ObjectMeta: metaV1.ObjectMeta{
-					Name: findFreeNamespace(todoCtx, cluster.Name),
-				},
-			}
-			clusterns, err := clientset.CoreV1().Namespaces().Create(todoCtx, &clusterNamespace, metaV1.CreateOptions{})
-			if err != nil {
-				log.Printf("Error creating cluster namespace %s", err.Error())
-				return
-			}
-			serviceAccount := v1.ServiceAccount{
-				ObjectMeta: metaV1.ObjectMeta{
-					Name:      cluster.Name,
-					Namespace: clusterns.Name,
-				},
-			}
-			srvAcc, err := clientset.CoreV1().ServiceAccounts(clusterns.Name).Create(todoCtx, &serviceAccount, metaV1.CreateOptions{})
-			if err != nil {
-				log.Printf("Error creating service account %s", err.Error())
-				return
-			}
-			roleBinding := rbacv1.RoleBinding{
-				ObjectMeta: metaV1.ObjectMeta{
-					Name: cluster.Name,
-				},
-				RoleRef: rbacv1.RoleRef{
-					Kind:     "ClusterRole",
-					Name:     "federation-cluster",
-					APIGroup: "rbac.authorization.k8s.io",
-				},
-				Subjects: []rbacv1.Subject{
-					{
-						Kind: "ServiceAccount",
-						Name: srvAcc.Name,
-					},
-				},
-			}
-			_, err = clientset.RbacV1().RoleBindings(clusterns.Name).Create(todoCtx, &roleBinding, metaV1.CreateOptions{})
-			if err != nil {
-				log.Printf("Error creating federation-cluster rolebinding %s", err.Error())
-			}
-			clusterRoleBinding := rbacv1.ClusterRoleBinding{
-				ObjectMeta: metaV1.ObjectMeta{
-					Name: cluster.Name,
-				},
-				RoleRef: rbacv1.RoleRef{
-					Kind:     "ClusterRole",
-					Name:     "federation-cluster-global",
-					APIGroup: "rbac.authorization.k8s.io",
-				},
-				Subjects: []rbacv1.Subject{
-					{
-						Kind:      "ServiceAccount",
-						Name:      srvAcc.Name,
-						Namespace: clusterns.Name,
-					},
-				},
-			}
-			_, err = clientset.RbacV1().ClusterRoleBindings().Create(todoCtx, &clusterRoleBinding, metaV1.CreateOptions{})
-			if err != nil {
-				log.Printf("Error creating federation-cluster-global clusterrolebinding %s", err.Error())
-			}
-
-			cluster.Spec.Namespace = clusterns.Name
-			if _, err := clustcrdclient.Update(todoCtx, cluster); err != nil {
-				log.Printf("Error updating cluster %s ns %s", cluster.Name, err.Error())
-			}
-		}
-	},
-	DeleteFunc: func(obj interface{}) {
-		log.Println("Cluster Handler Delete")
-		cluster, ok := obj.(*nrpapi.Cluster)
-		todoCtx := context.TODO()
-
-		if !ok {
-			log.Printf("Expected Cluster but other received %#v", obj)
-			return
-		}
-		if cluster.Spec.Namespace != "" {
-			if clusterNamespaces, err := clustnscrdclient.List(todoCtx, cluster.Spec.Namespace, metaV1.ListOptions{}); err == nil {
-				for _, clusterNs := range clusterNamespaces.Items {
-					if err := clientset.CoreV1().Namespaces().Delete(todoCtx, clusterNs.Name, metaV1.DeleteOptions{}); err != nil {
-						fmt.Printf("Error deleting clusternamespace %s %s", clusterNs.Name, err.Error())
-					}
-				}
-				if err := clientset.CoreV1().Namespaces().Delete(todoCtx, cluster.Spec.Namespace, metaV1.DeleteOptions{}); err != nil {
-					fmt.Printf("Error deleting cluster namespace %s %s", cluster.Spec.Namespace, err.Error())
-				}
-			}
-
-		}
-	},
-	UpdateFunc: func(oldObj, newObj interface{}) {
-		log.Println("Cluster Handler Update")
-		_, ok := oldObj.(*nrpapi.Cluster)
-		if !ok {
-			log.Printf("Expected Cluster but other received %#v", oldObj)
-			return
-		}
-		_, ok = newObj.(*nrpapi.Cluster)
-		if !ok {
-			log.Printf("Expected Cluster but other received %#v", newObj)
-			return
-		}
-	},
-}
-
-var clusterNSControllerHandlers = cache.ResourceEventHandlerFuncs{
-	AddFunc: func(obj interface{}) {
-		log.Println("ClusterNS Handler Add")
-		clusterNs, ok := obj.(*nrpapi.ClusterNamespace)
-
-		if !ok {
-			log.Printf("Expected ClusterNamespace but other received %#v", obj)
-			return
-		}
-		todoCtx := context.TODO()
-
-		namespace := v1.Namespace{
-			ObjectMeta: metaV1.ObjectMeta{
-				Name: clusterNs.Name,
-			},
-		}
-		clusterns, err := clientset.CoreV1().Namespaces().Create(todoCtx, &namespace, metaV1.CreateOptions{})
-		if err != nil {
-			log.Printf("Error creating cluster namespace %s", err.Error())
-			return
-		}
-		roleBinding := rbacv1.RoleBinding{
-			ObjectMeta: metaV1.ObjectMeta{
-				Name: clusterNs.Name,
-			},
-			RoleRef: rbacv1.RoleRef{
-				Kind:     "ClusterRole",
-				Name:     "federation-cluster",
-				APIGroup: "rbac.authorization.k8s.io",
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      clusterNs.Namespace,
-					Namespace: clusterNs.Namespace,
-				},
-			},
-		}
-		_, err = clientset.RbacV1().RoleBindings(clusterns.Name).Create(todoCtx, &roleBinding, metaV1.CreateOptions{})
-		if err != nil {
-			log.Printf("Error creating cluster rolebinding %s", err.Error())
-			return
-		}
-
-	},
-	DeleteFunc: func(obj interface{}) {
-		clusterNs, ok := obj.(*nrpapi.ClusterNamespace)
-		if !ok {
-			log.Printf("Expected ClusterNamespace but other received %#v", obj)
-			return
-		}
-		todoCtx := context.TODO()
-		if err := clientset.CoreV1().Namespaces().Delete(todoCtx, clusterNs.Name, metaV1.DeleteOptions{}); err != nil {
-			log.Printf("Error deleting namespace for cluster: %s", err.Error())
-			return
-		}
-	},
-	UpdateFunc: func(oldObj, newObj interface{}) {
-		log.Println("ClusterNS Handler Update")
-		_, ok := oldObj.(*nrpapi.ClusterNamespace)
-		if !ok {
-			log.Printf("Expected Cluster but other received %#v", oldObj)
-			return
-		}
-		_, ok = newObj.(*nrpapi.ClusterNamespace)
-		if !ok {
-			log.Printf("Expected Cluster but other received %#v", newObj)
-			return
-		}
-	},
-}
+var (
+	masterURL  string
+	kubeconfig string
+)
 
 func main() {
-	log.Println("Starting nrp-clone controller v0.1.19")
-	ctx := context.Background()
+	klog.InitFlags(nil)
+	klog.Warning("scheme: $#{clientscheme.Scheme}")
+	flag.Parse()
 
-	k8sconfig, err := rest.InClusterConfig()
+	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		log.Fatal("Failed to do inclusterconfig: " + err.Error())
-		return
+		klog.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
 
-	// Create a new clientset which include our CRD schema
-	log.Println("creating CRD ")
-	crdcs, scheme, err := nrpapi.NewClient(k8sconfig)
+	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		log.Printf("Error creating CRD client: %s", err.Error())
-		log.Printf("Error creating CRD client: %s", err.Error())
+		klog.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
 
-	clustcrdclient = nrpapi.MakeClusterCrdClient(crdcs, scheme, "default")
-	clustnscrdclient = nrpapi.MakeClusterNSCrdClient(crdcs, scheme)
-
-	clientset, err = kubernetes.NewForConfig(k8sconfig)
+	clusterClient, err := clientset.NewForConfig(cfg)
 	if err != nil {
-		log.Printf("Error creating client: %s", err.Error())
+		klog.Fatalf("Error building clientset: %s", err.Error())
 	}
 
-	//log.Printf("Testing query")
-	//result := nrpapi.ClusterList{}
-	//testerr := crdcs.
-	//	Get().
-	//	Resource("clusters").
-	//	Do(ctx).
-	//	Into(&result)
-	//if testerr != nil {
-	//	log.Printf("Got error %s", testerr)
-	//}
-	//log.Printf("result: %#v", result)
-	//log.Printf("query tested")
-	//
-	//log.Printf("Testing ns query")
-	//nsresult := nrpapi.ClusterNamespaceList{}
-	//nstesterr := crdcs.
-	//	Get().
-	//	Resource("clusters").
-	//	Do(ctx).
-	//	Into(&result)
-	//if nstesterr != nil {
-	//	log.Printf("Got error %s", testerr)
-	//}
-	//log.Printf("result: %#v", nsresult)
-	//log.Printf("ns query tested")
+	apiextensionsClientSet, err := apiextensionsclient.NewForConfig(cfg)
+	if err != nil {
+		panic(err)
+	}
 
+	klog.Warning("Adding CRD")
+	if err = nrpcontrollerv1alpha1.CreateClusterCRD(apiextensionsClientSet); err != nil {
+		klog.Fatalf("Got error while creating Cluster CRD: %v", err.Error())
+	}
+	if err = nrpcontrollerv1alpha1.CreateNSCRD(apiextensionsClientSet); err != nil {
+		klog.Fatalf("Got error while creating Cluster NS CRD: %v", err.Error())
+	}
+	klog.Warning("Adding CRD done")
+
+	//foo, err := clusterClient.NrpcontrollerV1alpha1().Clusters("").List(context.TODO(), metav1.ListOptions{})
+	//klog.Warningf("clusters: %#v", foo)
+	klog.Warning("Starting clusterController in goroutine")
+
+	klog.Warning("Starting clusterNSController in goroutine")
+	c := make(chan struct{})
 	go func() {
-		log.Print("Getting CRD")
-		GetCrd(ctx)
+		// set up signals so we handle the first shutdown signal gracefully
+		stopCh := signals.SetupSignalHandler()
+		kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
+		// we just want to watch the default namespace
+		clusterInformerFactory := informers.NewSharedInformerFactoryWithOptions(clusterClient,
+			time.Second*30,
+			informers.WithNamespace(""))
+		klog.Warning("Creating Cluster CRD controller")
+		clusterController := NewClusterController(kubeClient, clusterClient,
+			kubeInformerFactory.Apps().V1().Deployments(),
+			clusterInformerFactory.Nrpcontroller().V1alpha1().Clusters())
+		kubeInformerFactory.Start(stopCh)
+		clusterInformerFactory.Start(stopCh)
+
+		clusterController.Run(2, stopCh)
 	}()
+	d := make(chan struct{})
+	go func() {
+		// set up signals so we handle the first shutdown signal gracefully
+		stopCh := signals.SetupSignalHandler()
+		kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
+		// we just want to watch the default namespace
+		clusterNSInformerFactory := informers.NewSharedInformerFactory(clusterClient, time.Second*30)
 
+		klog.Warning("Creating Cluster CRD controller done")
+
+		clusterNSController := NewClusterNSController(kubeClient, clusterClient,
+			kubeInformerFactory.Apps().V1().Deployments(),
+			clusterNSInformerFactory.Nrpcontroller().V1alpha1().ClusterNSs())
+
+		// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
+		// Start method is non-blocking and runs all registered informers in a dedicated goroutine.
+		kubeInformerFactory.Start(stopCh)
+		clusterNSInformerFactory.Start(stopCh)
+
+		clusterNSController.Run(2, stopCh)
+	}()
+	<-c
+	<-d
 	select {}
+	//go func(stopChan <-chan struct{}) {
+	//	if err = clusterController.Run(2, stopCh); err != nil {
+	//		klog.Fatalf("Error running clusterController: %s", err.Error())
+	//	}
+	//	<-stopCh
+	//	klog.Warning("Cluster controller stopped")
+	//}(wait.NeverStop)
+	//
+	//klog.Warning("Starting clusterNSController in goroutine")
+	//
+	//go func(stopChan <-chan struct{}) {
+	//	if err = clusterNSController.Run(2, stopCh); err != nil {
+	//		klog.Fatalf("Error running clusterNSController: %s", err.Error())
+	//		fmt.Errorf("error from ClusterNS controller: %v", err.Error())
+	//	}
+	//	<-stopCh
+	//	klog.Warning("ClusterNS controller stopped")
+	//}(wait.NeverStop)
+	//klog.Warning("All done")
 
 }
 
-func GetCrd(ctx context.Context) {
-	k8sconfig, err := rest.InClusterConfig()
-	if err != nil {
-		log.Fatal("Failed to do inclusterconfig: " + err.Error())
-		return
-	}
-	log.Println("newForConfig")
-	crdclientset, err := apiextcs.NewForConfig(k8sconfig)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-	log.Println("CreateClusterCRD")
-	if err := nrpapi.CreateClusterCRD(timeoutCtx, crdclientset); err != nil {
-		log.Printf("Error creating CRD: %s", err.Error())
-	}
-	log.Println("CreateNSCRD")
-	if err := nrpapi.CreateNSCRD(ctx, crdclientset); err != nil {
-		log.Printf("Error creating NS CRD: %s", err.Error())
-	}
-
-	// Wait for the CRD to be created before we use it (only needed if it's a new one)
-	time.Sleep(3 * time.Second)
-
-	//log.Printf("clientset test")
-	//clusterList, err := clustcrdclient.List(context.TODO(), "default", metaV1.ListOptions{})
-	//clusterNSList, err := clustnscrdclient.List(context.TODO(), "default", metaV1.ListOptions{})
-	//log.Printf("list: %#v", clusterList)
-	//log.Printf("NS list: %#v", clusterNSList)
-	//log.Printf("clientset test done")
-
-	log.Println("Creating NewListWatch Cluster")
-	//_, clusterController := cache.NewInformer(
-	//	clustcrdclient.NewListWatch(),
-	//	&nrpapi.Cluster{},
-	//	time.Minute*1,
-	//	clusterControllerHandlers,
-	//)
-	_, clusterController := cache.NewInformer(
-		&cache.ListWatch{
-			ListFunc: func(lo metaV1.ListOptions) (result runtime.Object, err error) {
-				log.Printf("in cluster ListFunc")
-				clusterListCtx, cancel := context.WithCancel(ctx)
-				defer cancel()
-				return clustcrdclient.List(clusterListCtx, "default", lo)
-			},
-			WatchFunc: func(lo metaV1.ListOptions) (watch.Interface, error) {
-				log.Printf("in cluster WatchFunc")
-				clusterWatchCtx, cancel := context.WithCancel(ctx)
-				defer cancel()
-				return clustcrdclient.Watch(clusterWatchCtx, "default", lo)
-			},
-			DisableChunking: true,
-		},
-		&nrpapi.Cluster{},
-		time.Minute*1,
-		clusterControllerHandlers,
-	)
-
-	log.Println("Creating NewListWatch NS")
-	_, clusterNSController := cache.NewInformer(
-		&cache.ListWatch{
-			ListFunc: func(lo metaV1.ListOptions) (result runtime.Object, err error) {
-				log.Printf("in NS ListFunc")
-				nsListCtx, cancel := context.WithCancel(ctx)
-				defer cancel()
-				return clustnscrdclient.List(nsListCtx, "default", lo)
-			},
-			WatchFunc: func(lo metaV1.ListOptions) (watch.Interface, error) {
-				log.Printf("in NS WatchFunc")
-				nsWatchCtx := context.TODO()
-				//defer cancel()
-				return clustnscrdclient.Watch(nsWatchCtx, "default", lo)
-			},
-			DisableChunking: true,
-		},
-		&nrpapi.ClusterNamespace{},
-		time.Minute*1,
-		clusterNSControllerHandlers,
-	)
-
-	go clusterController.Run(wait.NeverStop)
-	go clusterNSController.Run(wait.NeverStop)
-
-	log.Println("looking for controllers")
-	// Wait forever
-	select {
-	case <-ctx.Done():
-		switch ctx.Err() {
-		case context.DeadlineExceeded:
-			fmt.Println("context timeout exceeded")
-		case context.Canceled:
-			fmt.Println("context cancelled by force. whole process is complete")
-		}
-	}
-}
-
-func findFreeNamespace(ctx context.Context, pattern string) string {
-	timeout1, cancel1 := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel1()
-	if _, err := clientset.CoreV1().Namespaces().Get(timeout1, pattern, metaV1.GetOptions{}); err != nil {
-		return pattern
-	}
-	num := 0
-	tryName := fmt.Sprintf("%s-%d", pattern, num)
-	var err error = nil
-	timeout2, cancel2 := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel2()
-	for ; err != nil; _, err = clientset.CoreV1().Namespaces().Get(timeout2, tryName, metaV1.GetOptions{}) {
-		num += 1
-		tryName = fmt.Sprintf("%s-%d", pattern, num)
-	}
-	return tryName
+func init() {
+	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 }
