@@ -25,11 +25,11 @@ CODEGEN_PKG=${CODEGEN_PKG:-$(cd "${SCRIPT_ROOT}"; ls -d -1 ./vendor/k8s.io/code-
 # --output-base    because this script should also be able to run inside the vendor dir of
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
-bash "${CODEGEN_PKG}"/generate-groups.sh  "deepcopy,client,informer,lister" \
-  github.com/slateci/nrp-clone/pkg/apis github.com/slateci/nrp-clone/pkg/apis \
-  nrpapi:v1alpha1 \
-  --output-base "$(dirname "${BASH_SOURCE[0]}")/../../../src" \
+
+echo ${BASH_SOURCE[0]}
+bash "${CODEGEN_PKG}"/generate-groups.sh "deepcopy,client,informer,lister" \
+  github.com/slateci/nrp-clone/pkg/generated github.com/slateci/nrp-clone/pkg/apis \
+  nrpcontroller:v1alpha1 \
+  --output-base "$(dirname "${BASH_SOURCE[0]}")/../../.." \
   --go-header-file "${SCRIPT_ROOT}"/codegen/boilerplate.go.txt
 
-# To use your own boilerplate text append:
-#   --go-header-file "${SCRIPT_ROOT}"/hack/custom-boilerplate.go.txt
