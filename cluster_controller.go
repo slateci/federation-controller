@@ -120,7 +120,7 @@ func NewClusterController(
 		recorder:          recorder,
 	}
 
-	klog.Info("Setting up event handlers for Cluster")
+	klog.V(4).Info("Setting up event handlers for Cluster")
 	// Set up an event handler for when Cluster resources change
 	clusterInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueCluster,
@@ -143,23 +143,23 @@ func (c *ClusterController) Run(workers int, stopCh <-chan struct{}) error {
 	defer c.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	klog.Info("Starting Cluster controller")
+	klog.V(4).Info("Starting Cluster controller")
 
 	// Wait for the caches to be synced before starting workers
-	klog.Info("Waiting for informer caches to sync")
+	klog.V(4).Info("Waiting for informer caches to sync")
 	if ok := cache.WaitForCacheSync(stopCh, c.deploymentsSynced, c.clustersSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	klog.Info("Starting workers")
+	klog.V(4).Info("Starting workers")
 	// Launch two workers to process Cluster resources
 	for i := 0; i < workers; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 
-	klog.Info("Started workers")
+	klog.V(4).Info("Started workers")
 	<-stopCh
-	klog.Info("Shutting down workers")
+	klog.V(4).Info("Shutting down workers")
 
 	return nil
 }
@@ -175,9 +175,9 @@ func (c *ClusterController) runWorker() {
 // processNextWorkItem will read a single work item off the workqueue and
 // attempt to process it, by calling the syncHandler.
 func (c *ClusterController) processNextWorkItem() bool {
-	klog.Warning("In processNextWorkItem")
+	klog.V(4).Info("In processNextWorkItem")
 	obj, shutdown := c.workqueue.Get()
-	klog.Warning("Got workqueue")
+	klog.V(4).Info("Got workqueue item")
 
 	if shutdown {
 		return false
@@ -207,7 +207,7 @@ func (c *ClusterController) processNextWorkItem() bool {
 			utilruntime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
 			return nil
 		}
-		klog.Warningf("Got key %s to process", key)
+		klog.V(4).Infof("Got key %s to process", key)
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Cluster resource to be synced.
 		if err := c.syncHandler(key); err != nil {
@@ -218,7 +218,7 @@ func (c *ClusterController) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		klog.Infof("Successfully synced '%s'", key)
+		klog.V(4).Infof("Successfully synced '%s'", key)
 		return nil
 	}(obj)
 
@@ -234,9 +234,9 @@ func (c *ClusterController) processNextWorkItem() bool {
 // converge the two. It then updates the Status block of the Cluster resource
 // with the current status of the resource.
 func (c *ClusterController) syncHandler(key string) error {
-	klog.Warning("In syncHandler")
+	klog.V(4).Info("In syncHandler")
 	// Convert the namespace/name string into a distinct namespace and name
-	klog.Warningf("Retrieving cluster key  - %s", key)
+	klog.V(4).Infof("Retrieving cluster key  - %s", key)
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
@@ -246,7 +246,7 @@ func (c *ClusterController) syncHandler(key string) error {
 	// Get the Cluster resource with this /name
 	cluster, err := c.clustersLister.Clusters(namespace).Get(name)
 	if err != nil {
-		klog.Warningf("Error in get: %s - %s ", err.Error(), namespace)
+		klog.V(4).Infof("Error in get: %s - %s ", err.Error(), namespace)
 		// If the Cluster resource no longer exists, it's been deleted and we need
 		// to clean things up
 		if errors.IsNotFound(err) {
@@ -258,10 +258,10 @@ func (c *ClusterController) syncHandler(key string) error {
 
 		return err
 	}
-	klog.Warning("Processing Cluster")
+	klog.V(4).Info("Processing Cluster")
 
 	// Process Cluster
-	klog.Warning("Creating namespace for Cluster")
+	klog.V(4).Info("Creating namespace for Cluster")
 	createdNamespace := createClusterNamespace(cluster.Name)
 	svcAcct := createServiceAccount(cluster.Name, createdNamespace)
 	createRoleBindings(cluster.Name, svcAcct, createdNamespace)
@@ -293,7 +293,7 @@ func (c *ClusterController) syncHandler(key string) error {
 }
 
 func (c *ClusterController) updateClusterStatus(cluster *nrpv1alpha1.Cluster) error {
-	klog.Warning("updateClusterStatus")
+	klog.V(4).Info("updateClusterStatus running")
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
@@ -303,6 +303,7 @@ func (c *ClusterController) updateClusterStatus(cluster *nrpv1alpha1.Cluster) er
 	// UpdateStatus will not allow changes to the Spec of the resource,
 	// which is ideal for ensuring nothing other than resource status has been updated.
 	_, err := c.nrpclientset.NrpcontrollerV1alpha1().Clusters("").Update(context.TODO(), clusterCopy, metav1.UpdateOptions{})
+	klog.V(4).Info("updateClusterStatus done")
 	return err
 }
 
@@ -375,13 +376,14 @@ func (c *ClusterController) handleObject(obj interface{}) {
 func (c *ClusterController) enqueueClusterForDelete(obj interface{}) {
 	var key string
 	var err error
-	klog.Warning("Deleting Cluster")
+	klog.V(4).Info("Deleting Cluster")
 	key, err = cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
 		utilruntime.HandleError(err)
 		return
 	}
 	c.workqueue.AddRateLimited(key)
+	klog.V(4).Info("Deleting Cluster done")
 }
 
 func createClusterNamespace(pattern string) string {
@@ -492,11 +494,33 @@ func createRoleBindings(clusterName string, svcAccount string, namespace string)
 }
 
 func deleteCluster(clusterName string, clusterNamespace string) error {
-	klog.Warning("Cluster Handler Delete")
+	klog.V(4).Info("Cluster Handler Delete")
 	todoCtx := context.TODO()
 
 	kubeClient := getKubeClientSet()
-	err := kubeClient.
+	// Delete any namespaces created by ClusterNSs, need to do this before deleting the cluster namespace
+	klog.V(4).Info("Getting ClusterNS for deletion")
+	clusterClient := getClusterClientSet()
+	clusterNSList, err := clusterClient.NrpcontrollerV1alpha1().ClusterNSs(clusterNamespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		klog.Errorf("Error getting additional namespaces for %s: %s", clusterName, err.Error())
+		return err
+	}
+	for _, item := range clusterNSList.Items {
+		err := kubeClient.
+			CoreV1().
+			Namespaces().
+			Delete(todoCtx, item.Spec.NS, metav1.DeleteOptions{})
+		if err != nil {
+			klog.Errorf("Error deleting cluster namespace %s: %s", item.Spec.NS, err.Error())
+			return fmt.Errorf("while deleting namespace %s for %s, got error: %v",
+				clusterName,
+				clusterNamespace,
+				err)
+		}
+	}
+
+	err = kubeClient.
 		CoreV1().
 		Namespaces().
 		Delete(todoCtx, clusterNamespace, metav1.DeleteOptions{})
@@ -530,27 +554,6 @@ func deleteCluster(clusterName string, clusterNamespace string) error {
 			clusterName,
 			err)
 	}
-	// Delete any namespaces created by ClusterNSs
-	klog.Warning("Getting ClusterNS for deletion")
-	clusterClient := getClusterClientSet()
-	clusterNSList, err := clusterClient.NrpcontrollerV1alpha1().Clusters("").List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		klog.Errorf("Error getting additional namespaces for %s: %s", clusterName, err.Error())
-		return err
-	}
-	for _, item := range clusterNSList.Items {
-		err := kubeClient.
-			CoreV1().
-			Namespaces().
-			Delete(todoCtx, item.Spec.NS, metav1.DeleteOptions{})
-		if err != nil {
-			klog.Errorf("Error deleting cluster namespace %s: %s", item.Spec.NS, err.Error())
-			return fmt.Errorf("while deleting namespace %s for %s, got error: %v",
-				clusterName,
-				clusterNamespace,
-				err)
-		}
-	}
-	klog.Warning("Deleted Cluster")
+	klog.V(4).Info("Deleted Cluster")
 	return nil
 }
