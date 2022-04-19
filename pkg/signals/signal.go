@@ -28,7 +28,7 @@ var onlyOneSignalHandler = make(chan struct{})
 // which is closed on one of these signals. If a second signal is caught, the program
 // is terminated with exit code 1.
 func SetupSignalHandler() (stopCh <-chan struct{}) {
-	klog.Warning("Sig handler")
+	klog.V(4).Info("Setting up Signal handler")
 	close(onlyOneSignalHandler) // panics when called twice
 
 	stop := make(chan struct{})
@@ -40,7 +40,7 @@ func SetupSignalHandler() (stopCh <-chan struct{}) {
 		<-c
 		os.Exit(1) // second signal. Exit directly.
 	}()
-	klog.Warning("Sig handler done")
+	klog.V(4).Info("Done setting up Signal handler")
 
 	return stop
 }

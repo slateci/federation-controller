@@ -19,20 +19,18 @@ package main
 import (
 	"context"
 	"fmt"
+	nrpv1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha1"
 	rbac "k8s.io/api/rbac/v1"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	appsinformers "k8s.io/client-go/informers/apps/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	appslisters "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -52,11 +50,11 @@ const (
 	ClusterNSSuccessDeleted = "Deleted"
 
 	// ClusterNSErrResourceExists is used as part of the Event 'reason' when a Cluster fails
-	// to sync due to a Deployment of the same name already existing.
+	// to sync.
 	ClusterNSErrResourceExists = "ErrResourceExists"
 
 	// ClusterNSMessageResourceExists is the message used for Events when a resource
-	// fails to sync due to a Deployment already existing
+	// fails to sync
 	ClusterNSMessageResourceExists = "Resource %q already exists and is not managed by Cluster"
 	// ClusterNSMessageResourceSynced is the message used for an Event fired when a Cluster
 	// is synced successfully
@@ -73,10 +71,8 @@ type ClusterNSController struct {
 	// nrpclientset is a clientset for our own API group
 	nrpclientset clientset.Interface
 
-	deploymentsLister appslisters.DeploymentLister
-	deploymentsSynced cache.InformerSynced
-	clusterNSLister   listers.ClusterNSLister
-	clusterNSsSynced  cache.InformerSynced
+	clusterNSLister  listers.ClusterNSLister
+	clusterNSsSynced cache.InformerSynced
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
@@ -93,7 +89,6 @@ type ClusterNSController struct {
 func NewClusterNSController(
 	kubeclientset kubernetes.Interface,
 	clusternsclientset clientset.Interface,
-	deploymentInformer appsinformers.DeploymentInformer,
 	clusterNSInformer informers.ClusterNSInformer) *ClusterNSController {
 
 	// Create event broadcaster
@@ -107,17 +102,15 @@ func NewClusterNSController(
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	controller := &ClusterNSController{
-		kubeclientset:     kubeclientset,
-		nrpclientset:      clusternsclientset,
-		deploymentsLister: deploymentInformer.Lister(),
-		deploymentsSynced: deploymentInformer.Informer().HasSynced,
-		clusterNSLister:   clusterNSInformer.Lister(),
-		clusterNSsSynced:  clusterNSInformer.Informer().HasSynced,
-		workqueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Clusters"),
-		recorder:          recorder,
+		kubeclientset:    kubeclientset,
+		nrpclientset:     clusternsclientset,
+		clusterNSLister:  clusterNSInformer.Lister(),
+		clusterNSsSynced: clusterNSInformer.Informer().HasSynced,
+		workqueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Clusters"),
+		recorder:         recorder,
 	}
 
-	klog.Info("Setting up event handlers for clusterNS")
+	klog.V(4).Info("Setting up event handlers for clusterNS")
 	// Set up an event handler for when Cluster resources change
 	clusterNSInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueCluster,
@@ -127,27 +120,6 @@ func NewClusterNSController(
 		},
 		DeleteFunc: controller.enqueueClusterNSForDelete,
 	})
-	// Set up an event handler for when Deployment resources change. This
-	// handler will lookup the owner of the given Deployment, and if it is
-	// owned by a Cluster resource then the handler will enqueue that Cluster resource for
-	// processing. This way, we don't need to implement custom logic for
-	// handling Deployment resources. More info on this pattern:
-	// https://github.com/kubernetes/community/blob/8cafef897a22026d42f5e5bb3f104febe7e29830/contributors/devel/controllers.md
-	deploymentInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.handleObject,
-		UpdateFunc: func(old, new interface{}) {
-			newDepl := new.(*appsv1.Deployment)
-			oldDepl := old.(*appsv1.Deployment)
-			if newDepl.ResourceVersion == oldDepl.ResourceVersion {
-				// Periodic resync will send update events for all known Deployments.
-				// Two different versions of the same Deployment will always have different RVs.
-				return
-			}
-			controller.handleObject(new)
-		},
-		DeleteFunc: controller.enqueueClusterNSForDelete,
-	})
-
 	return controller
 }
 
@@ -160,23 +132,23 @@ func (c *ClusterNSController) Run(workers int, stopCh <-chan struct{}) error {
 	defer c.workqueue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	klog.Info("Starting ClusterNS controller")
+	klog.V(4).Info("Starting ClusterNS controller")
 
 	// Wait for the caches to be synced before starting workers
-	klog.Info("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.deploymentsSynced, c.clusterNSsSynced); !ok {
+	klog.V(4).Info("Waiting for informer caches to sync")
+	if ok := cache.WaitForCacheSync(stopCh, c.clusterNSsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	klog.Info("Starting workers")
+	klog.V(4).Info("Starting workers")
 	// Launch two workers to process Cluster resources
 	for i := 0; i < workers; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 
-	klog.Info("Started workers")
+	klog.V(4).Info("Started workers")
 	<-stopCh
-	klog.Info("Shutting down workers")
+	klog.V(4).Info("Shutting down workers")
 
 	return nil
 }
@@ -248,7 +220,7 @@ func (c *ClusterNSController) processNextWorkItem() bool {
 // converge the two. It then updates the Status block of the Cluster resource
 // with the current status of the resource.
 func (c *ClusterNSController) syncHandler(key string) error {
-	klog.Warning("In syncHandler")
+	klog.V(4).Info("In syncHandler")
 	// Convert the namespace/name string into a distinct namespace and name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
@@ -259,11 +231,11 @@ func (c *ClusterNSController) syncHandler(key string) error {
 	// Get the Cluster resource with this namespace/name
 	clusterNS, err := c.clusterNSLister.ClusterNSs(namespace).Get(name)
 	if err != nil {
-		klog.Warningf("Error in get: %s - %s ", err.Error(), namespace)
+		klog.Errorf("Error in get: %s - %s ", err.Error(), namespace)
 		// If the ClusterNS resource no longer exists, it's been deleted, and we need
 		// to clean things up
 		if errors.IsNotFound(err) {
-			if err = deleteClusterNS(clusterNS.Name, clusterNS.Spec.NS); err != nil {
+			if err = deleteClusterNS(name); err != nil {
 				return err
 			}
 			return nil
@@ -271,14 +243,22 @@ func (c *ClusterNSController) syncHandler(key string) error {
 
 		return err
 	}
-	klog.Warning("Processing ClusterNS")
+	klog.V(4).Info("Processing ClusterNS")
 
 	// Process Cluster
-	klog.Warning("Creating ClusterNS")
+	klog.V(4).Info("Creating ClusterNS")
 	if err = createClusterNSNamespace(clusterNS.Name); err != nil {
 		return err
 	}
 	createClusterNSRoleBindings(clusterNS.Name, clusterNS.Spec.NS, clusterNS.Spec.NS)
+
+	// Update cluster information
+	clusterNS.Spec.NS = clusterNS.Name
+	clusterNS.Spec.Organization = "slate"
+	err = c.updateClusterNSStatus(clusterNS)
+	if err != nil {
+		klog.Errorf("Error updating cluster %s ns %s", clusterNS.Name, err.Error())
+	}
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
 	// attempt processing again later. This could have been caused by a
@@ -344,6 +324,21 @@ func (c *ClusterNSController) handleObject(obj interface{}) {
 	}
 }
 
+func (c *ClusterNSController) updateClusterNSStatus(cluster *nrpv1alpha1.ClusterNS) error {
+	klog.V(4).Info("updateClusterStatus")
+	// NEVER modify objects from the store. It's a read-only, local cache.
+	// You can use DeepCopy() to make a deep copy of original object and modify this copy
+	// Or create a copy manually for better performance
+	clusterCopy := cluster.DeepCopy()
+	// If the CustomResourceSubresources feature gate is not enabled,
+	// we must use Update instead of UpdateStatus to update the Status block of the Cluster resource.
+	// UpdateStatus will not allow changes to the Spec of the resource,
+	// which is ideal for ensuring nothing other than resource status has been updated.
+	_, err := c.nrpclientset.NrpcontrollerV1alpha1().ClusterNSs(cluster.ObjectMeta.Namespace).Update(context.TODO(), clusterCopy, metav1.UpdateOptions{})
+	klog.V(4).Info("updateClusterStatus done")
+	return err
+}
+
 // enqueueClusterForDelete takes a deleted Cluster resource and converts it into a namespace/name
 // string which is then put onto the work queue. This method should *not* be
 // passed resources of any type other than Network.
@@ -358,11 +353,10 @@ func (c *ClusterNSController) enqueueClusterNSForDelete(obj interface{}) {
 	c.workqueue.AddRateLimited(key)
 }
 
-func deleteClusterNS(clusterNS string, clusterNamespace string) error {
-	klog.Warning("Cluster Handler Delete")
+func deleteClusterNS(clusterNamespace string) error {
+	klog.V(4).Info("Cluster Handler Delete")
 	todoCtx := context.TODO()
 
-	// TODO: get clusterNS and use had to delete namespaces
 	kubeClient := getKubeClientSet()
 	err := kubeClient.
 		CoreV1().
@@ -370,11 +364,11 @@ func deleteClusterNS(clusterNS string, clusterNamespace string) error {
 		Delete(todoCtx, clusterNamespace, metav1.DeleteOptions{})
 	if err != nil {
 		klog.Errorf("Error deleting cluster namespace %s: %s", clusterNamespace, err.Error())
-		return fmt.Errorf("While deleting namespace %s for %s, got error: %v",
+		return fmt.Errorf("While deleting namespace %s, got error: %v",
 			clusterNamespace,
-			clusterNS,
 			err)
 	}
+	klog.V(4).Info("Cluster Handler Delete done")
 	return nil
 }
 
@@ -417,4 +411,15 @@ func createClusterNSNamespace(namespace string) error {
 	} else {
 		return fmt.Errorf("error creating namespace %s: %s", namespace, err.Error())
 	}
+}
+
+func validClusterNS(clusterNS string) bool {
+	kubeClient := getKubeClientSet()
+	_, err := kubeClient.CoreV1().Namespaces().Get(context.TODO(), clusterNS, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false
+		}
+	}
+	return true
 }

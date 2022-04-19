@@ -47,7 +47,6 @@ var (
 
 func main() {
 	klog.InitFlags(nil)
-	klog.Warning("scheme: $#{clientscheme.Scheme}")
 	flag.Parse()
 
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
@@ -70,21 +69,16 @@ func main() {
 		panic(err)
 	}
 
-	klog.Warning("Adding CRD")
+	klog.V(4).Info("Adding CRD")
 	if err = nrpcontrollerv1alpha1.CreateClusterCRD(apiextensionsClientSet); err != nil {
 		klog.Fatalf("Got error while creating Cluster CRD: %v", err.Error())
 	}
 	if err = nrpcontrollerv1alpha1.CreateNSCRD(apiextensionsClientSet); err != nil {
 		klog.Fatalf("Got error while creating Cluster NS CRD: %v", err.Error())
 	}
-	klog.Warning("Adding CRD done")
+	klog.V(4).Info("Adding CRD done")
 
-	//foo, err := clusterClient.NrpcontrollerV1alpha1().Clusters("").List(context.TODO(), metav1.ListOptions{})
-	//klog.Warningf("clusters: %#v", foo)
-	klog.Warning("Starting clusterController in goroutine")
-
-	klog.Warning("Starting clusterNSController in goroutine")
-	c := make(chan struct{})
+	klog.V(4).Info("Starting clusterController in goroutine")
 	go func() {
 		// set up signals so we handle the first shutdown signal gracefully
 		stopCh := signals.SetupSignalHandler()
@@ -93,7 +87,7 @@ func main() {
 		clusterInformerFactory := informers.NewSharedInformerFactoryWithOptions(clusterClient,
 			time.Second*30,
 			informers.WithNamespace(""))
-		klog.Warning("Creating Cluster CRD controller")
+		klog.V(4).Info("Creating Cluster CRD controller")
 		clusterController := NewClusterController(kubeClient, clusterClient,
 			kubeInformerFactory.Apps().V1().Deployments(),
 			clusterInformerFactory.Nrpcontroller().V1alpha1().Clusters())
@@ -102,18 +96,18 @@ func main() {
 
 		clusterController.Run(2, stopCh)
 	}()
-	d := make(chan struct{})
+	// Sleep for a little bit to allow controller to initialize
+	time.Sleep(10 * time.Second)
+	klog.V(4).Info("Starting clusterNSController in goroutine")
 	go func() {
 		// set up signals so we handle the first shutdown signal gracefully
-		stopCh := signals.SetupSignalHandler()
+		stopCh := make(chan struct{})
 		kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 		// we just want to watch the default namespace
 		clusterNSInformerFactory := informers.NewSharedInformerFactory(clusterClient, time.Second*30)
 
-		klog.Warning("Creating Cluster CRD controller done")
-
+		klog.V(4).Info("Creating ClusterNS CRD controller")
 		clusterNSController := NewClusterNSController(kubeClient, clusterClient,
-			kubeInformerFactory.Apps().V1().Deployments(),
 			clusterNSInformerFactory.Nrpcontroller().V1alpha1().ClusterNSs())
 
 		// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
@@ -123,29 +117,7 @@ func main() {
 
 		clusterNSController.Run(2, stopCh)
 	}()
-	<-c
-	<-d
 	select {}
-	//go func(stopChan <-chan struct{}) {
-	//	if err = clusterController.Run(2, stopCh); err != nil {
-	//		klog.Fatalf("Error running clusterController: %s", err.Error())
-	//	}
-	//	<-stopCh
-	//	klog.Warning("Cluster controller stopped")
-	//}(wait.NeverStop)
-	//
-	//klog.Warning("Starting clusterNSController in goroutine")
-	//
-	//go func(stopChan <-chan struct{}) {
-	//	if err = clusterNSController.Run(2, stopCh); err != nil {
-	//		klog.Fatalf("Error running clusterNSController: %s", err.Error())
-	//		fmt.Errorf("error from ClusterNS controller: %v", err.Error())
-	//	}
-	//	<-stopCh
-	//	klog.Warning("ClusterNS controller stopped")
-	//}(wait.NeverStop)
-	//klog.Warning("All done")
-
 }
 
 func init() {
