@@ -18,7 +18,7 @@ package main
 
 import (
 	"flag"
-	nrpcontrollerv1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha1"
+	nrpcontrollerv1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha2"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"time"
 

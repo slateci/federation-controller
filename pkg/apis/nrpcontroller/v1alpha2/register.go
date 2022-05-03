@@ -1,4 +1,4 @@
-package v1alpha1
+package v1alpha2
 
 import (
 	nrpcontroller "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller"
@@ -17,7 +17,7 @@ var (
 // SchemeGroupVersion is group version used to register these objects
 var SchemeGroupVersion = schema.GroupVersion{
 	Group:   nrpcontroller.GroupName,
-	Version: "v1alpha1",
+	Version: "v1alpha2",
 }
 
 // Kind takes an unqualified kind and returns back a Group qualified GroupKind

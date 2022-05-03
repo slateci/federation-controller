@@ -22,7 +22,7 @@ import (
 	"context"
 	time "time"
 
-	nrpcontrollerv1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha1"
+	nrpcontrollerv1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha2"
 	versioned "github.com/slateci/nrp-clone/pkg/generated/clientset/versioned"
 	internalinterfaces "github.com/slateci/nrp-clone/pkg/generated/informers/externalversions/internalinterfaces"
 	v1alpha1 "github.com/slateci/nrp-clone/pkg/generated/listers/nrpcontroller/v1alpha1"

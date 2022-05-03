@@ -38,7 +38,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
-	nrpv1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha1"
+	nrpv1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha2"
 	clientset "github.com/slateci/nrp-clone/pkg/generated/clientset/versioned"
 	nrpscheme "github.com/slateci/nrp-clone/pkg/generated/clientset/versioned/scheme"
 	informers "github.com/slateci/nrp-clone/pkg/generated/informers/externalversions/nrpcontroller/v1alpha1"

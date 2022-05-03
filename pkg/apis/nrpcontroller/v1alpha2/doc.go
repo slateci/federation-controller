@@ -1,4 +1,4 @@
 // +k8s:deepcopy-gen=package,register
 // +groupName=nrpcontroller
 
-package v1alpha1
+package v1alpha2

@@ -21,7 +21,7 @@ package fake
 import (
 	"context"
 
-	v1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha1"
+	v1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,9 +36,9 @@ type FakeClusterNSs struct {
 	ns   string
 }
 
-var clusternssResource = schema.GroupVersionResource{Group: "nrpcontroller", Version: "v1alpha1", Resource: "clusternss"}
+var clusternssResource = schema.GroupVersionResource{Group: "nrpcontroller", Version: "v1alpha2", Resource: "clusternss"}
 
-var clusternssKind = schema.GroupVersionKind{Group: "nrpcontroller", Version: "v1alpha1", Kind: "ClusterNS"}
+var clusternssKind = schema.GroupVersionKind{Group: "nrpcontroller", Version: "v1alpha2", Kind: "ClusterNS"}
 
 // Get takes name of the clusterNS, and returns the corresponding clusterNS object, and an error if there is any.
 func (c *FakeClusterNSs) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterNS, err error) {

@@ -19,7 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
-	nrpv1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha1"
+	nrpv1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha2"
 	rbac "k8s.io/api/rbac/v1"
 	"time"
 

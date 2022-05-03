@@ -1,30 +1,41 @@
-package v1alpha1
+package v1alpha2
 
 import (
 	"context"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	"reflect"
 )
 
 const (
-	ClusterCRDPlural   string = "clusters"
-	ClusterCRDGroup    string = "nrp-nautilus.io"
-	ClusterCRDVersion  string = "v1alpha1"
-	FullClusterCRDName string = ClusterCRDPlural + "." + ClusterCRDGroup
+	ClusterNSCRDPlural   string = "clusternss"
+	ClusterNSCRDGroup    string = "nrp-nautilus.io"
+	ClusterNSCRDVersion  string = "v1alpha2"
+	ClusterNSFullCRDName string = ClusterNSCRDPlural + "." + ClusterNSCRDGroup
 )
 
-// CreateClusterCRD creates a new Cluster CRD
-func CreateClusterCRD(clientset apiextcs.Interface) error {
+// +k8s:deepcopy-gen=false
+
+type ClusterNSCrdClient struct {
+	cl     *rest.RESTClient
+	plural string
+	codec  runtime.ParameterCodec
+}
+
+// Create the CRD resource, ignore error if it already exists
+
+func CreateNSCRD(clientset apiextcs.Interface) error {
 	crd := apiextv1.CustomResourceDefinition{
-		ObjectMeta: metaV1.ObjectMeta{Name: FullClusterCRDName},
+		ObjectMeta: metav1.ObjectMeta{Name: ClusterNSFullCRDName},
 		Spec: apiextv1.CustomResourceDefinitionSpec{
-			Group: ClusterCRDGroup,
+			Group: ClusterNSCRDGroup,
 			Versions: []apiextv1.CustomResourceDefinitionVersion{
 				{
-					Name:    ClusterCRDVersion,
+					Name:    ClusterNSCRDVersion,
 					Served:  true,
 					Storage: true,
 					Schema: &apiextv1.CustomResourceValidation{
@@ -44,16 +55,15 @@ func CreateClusterCRD(clientset apiextcs.Interface) error {
 					},
 				},
 			},
-			Scope: apiextv1.ClusterScoped,
+			Scope: apiextv1.NamespaceScoped,
 			Names: apiextv1.CustomResourceDefinitionNames{
-				Plural: ClusterCRDPlural,
-				Kind:   reflect.TypeOf(Cluster{}).Name(),
+				Plural: ClusterNSCRDPlural,
+				Kind:   reflect.TypeOf(ClusterNS{}).Name(),
 			},
 		},
 	}
 
-	opts := metaV1.CreateOptions{}
-	_, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Create(context.TODO(), &crd, opts)
+	_, err := clientset.ApiextensionsV1().CustomResourceDefinitions().Create(context.TODO(), &crd, metav1.CreateOptions{})
 	if err != nil && apierrors.IsAlreadyExists(err) {
 		return nil
 	}
