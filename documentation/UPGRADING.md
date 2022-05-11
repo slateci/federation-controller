@@ -1,7 +1,7 @@
 ## Upgrading to new Slate NRP controller
 To upgrade the NRP controller from the prior version, do the following
 
-* Run `k get clusternamespace -A -o yaml > clusternamespaces.yaml`
+* Run `kubectl get clusternamespace -A -o yaml > clusternamespaces.yaml`
 * Edit `clusternamespaces.yaml` and make the following changes to each entry:
   * Change `apiversion` to `nrp-nautilus.io/v1alpha2`
   * Change `kind` from `ClusterNamespace` to `ClusterNS`
