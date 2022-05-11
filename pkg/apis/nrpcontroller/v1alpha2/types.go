@@ -16,7 +16,7 @@ type Cluster struct {
 
 type ClusterSpec struct {
 	Organization string `json:""`
-	NS           string `json:""`
+	Namespace    string `json:""`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

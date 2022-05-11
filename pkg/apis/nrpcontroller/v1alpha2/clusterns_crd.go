@@ -46,9 +46,9 @@ func CreateNSCRD(clientset apiextcs.Interface) error {
 									Type: "object",
 									Properties: map[string]apiextv1.JSONSchemaProps{
 										"Organization": {Type: "string", Format: "str"},
-										"NS":           {Type: "string", Format: "str"},
+										"Namespace":    {Type: "string", Format: "str"},
 									},
-									Required: []string{"Organization", "NS"},
+									Required: []string{"Organization", "Namespace"},
 								},
 							},
 						},

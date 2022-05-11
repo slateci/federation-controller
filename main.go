@@ -39,6 +39,7 @@ import (
 )
 
 const controllerAgentName = "nrp-controller"
+const controllerVersion = "0.2.7"
 
 var (
 	masterURL  string
@@ -49,6 +50,7 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
+	klog.V(4).Infof("Starting %s version %s", controllerAgentName, controllerVersion)
 	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
 		klog.Fatalf("Error building kubeconfig: %s", err.Error())
@@ -74,7 +76,7 @@ func main() {
 		klog.Fatalf("Got error while creating Cluster CRD: %v", err.Error())
 	}
 	if err = nrpcontrollerv1alpha1.CreateNSCRD(apiextensionsClientSet); err != nil {
-		klog.Fatalf("Got error while creating Cluster NS CRD: %v", err.Error())
+		klog.Fatalf("Got error while creating Cluster Namespace CRD: %v", err.Error())
 	}
 	klog.V(4).Info("Adding CRD done")
 

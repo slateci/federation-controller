@@ -52,7 +52,7 @@ func (in *Cluster) DeepCopyInto(out *Cluster) {
 
 func (in *ClusterSpec) DeepCopyInto(out *ClusterSpec) {
 	*out = *in
-	out.NS = in.NS
+	out.Namespace = in.Namespace
 	out.Organization = in.Organization
 }
 

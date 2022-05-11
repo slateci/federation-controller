@@ -250,10 +250,10 @@ func (c *ClusterNSController) syncHandler(key string) error {
 	if err = createClusterNSNamespace(clusterNS.Name); err != nil {
 		return err
 	}
-	createClusterNSRoleBindings(clusterNS.Name, clusterNS.Spec.NS, clusterNS.Spec.NS)
+	createClusterNSRoleBindings(clusterNS.Name, clusterNS.Spec.Namespace, clusterNS.Spec.Namespace)
 
 	// Update cluster information
-	clusterNS.Spec.NS = clusterNS.Name
+	clusterNS.Spec.Namespace = clusterNS.Name
 	clusterNS.Spec.Organization = "slate"
 	err = c.updateClusterNSStatus(clusterNS)
 	if err != nil {

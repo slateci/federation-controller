@@ -274,7 +274,7 @@ func (c *ClusterController) syncHandler(key string) error {
 	}
 
 	// Update cluster information
-	cluster.Spec.NS = createdNamespace
+	cluster.Spec.Namespace = createdNamespace
 	cluster.Spec.Organization = "slate"
 	err = c.updateClusterStatus(cluster)
 	if err != nil {
@@ -313,7 +313,7 @@ func (c *ClusterController) updateClusterStatus(cluster *nrpv1alpha1.Cluster) er
 func (c *ClusterController) enqueueCluster(obj interface{}) {
 	var key string
 	var err error
-	// Cluster has a NS field that is being used for to
+	// Cluster has a Namespace field that is being used for to
 	// store the namespace that the Cluster is using, this
 	// interferes with the k8s introspection code so we can't
 	// use default code such as:
@@ -510,9 +510,9 @@ func deleteCluster(clusterName string, clusterNamespace string) error {
 		err := kubeClient.
 			CoreV1().
 			Namespaces().
-			Delete(todoCtx, item.Spec.NS, metav1.DeleteOptions{})
+			Delete(todoCtx, item.Spec.Namespace, metav1.DeleteOptions{})
 		if err != nil {
-			klog.Errorf("Error deleting cluster namespace %s: %s", item.Spec.NS, err.Error())
+			klog.Errorf("Error deleting cluster namespace %s: %s", item.Spec.Namespace, err.Error())
 			return fmt.Errorf("while deleting namespace %s for %s, got error: %v",
 				clusterName,
 				clusterNamespace,
