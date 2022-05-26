@@ -245,12 +245,12 @@ func (c *ClusterNSController) syncHandler(key string) error {
 	}
 	klog.V(4).Info("Processing ClusterNS")
 
-	// Process Cluster
-	klog.V(4).Info("Creating ClusterNS")
+	// Process ClusterNS
+	klog.V(4).Info("Creating ClusterNS Namespace and role binding")
 	if err = createClusterNSNamespace(clusterNS.Name); err != nil {
 		return err
 	}
-	createClusterNSRoleBindings(clusterNS.Name, clusterNS.Spec.Namespace, clusterNS.Spec.Namespace)
+	createClusterNSRoleBindings(clusterNS.Name, clusterNS.ObjectMeta.Namespace, clusterNS.Name)
 
 	// Update cluster information
 	clusterNS.Spec.Namespace = clusterNS.Name
