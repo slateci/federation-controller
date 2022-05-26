@@ -39,7 +39,7 @@ import (
 )
 
 const controllerAgentName = "nrp-controller"
-const controllerVersion = "0.2.7"
+const controllerVersion = "0.2.9"
 
 var (
 	masterURL  string
