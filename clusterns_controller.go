@@ -252,6 +252,7 @@ func (c *ClusterNSController) syncHandler(key string) error {
 	}
 	// want to create a rolebinding using the service account (same as namespace that clusterNS lives in)
 	// the rolebinding should refer to namespace where the service account lives
+	klog.Infof("create rolebinding: name=%s svcAccount=%s namespace=%s", clusterNS.Name, clusterNS.ObjectMeta.Namespace, clusterNS.Name)
 	createClusterNSRoleBindings(clusterNS.Name, clusterNS.ObjectMeta.Namespace, clusterNS.Name)
 
 	// Update cluster information
@@ -397,6 +398,7 @@ func createClusterNSRoleBindings(clusterNSName string, svcAccount string, namesp
 		RbacV1().
 		RoleBindings(namespace).
 		Create(context.TODO(), &roleBinding, metav1.CreateOptions{})
+	klog.Infof("Creating rolebinding in %s namespace", namespace)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
 			klog.Errorf("Error creating federation-cluster rolebinding %s", err.Error())
