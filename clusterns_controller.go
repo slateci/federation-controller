@@ -378,7 +378,8 @@ func createClusterNSRoleBindings(clusterNSName string, svcAccount string, namesp
 	kubeClient := getKubeClientSet()
 	roleBinding := rbac.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: clusterNSName,
+			Name:      clusterNSName,
+			Namespace: namespace,
 		},
 		RoleRef: rbac.RoleRef{
 			Kind:     "ClusterRole",
@@ -389,7 +390,7 @@ func createClusterNSRoleBindings(clusterNSName string, svcAccount string, namesp
 			{
 				Kind:      "ServiceAccount",
 				Name:      svcAccount,
-				Namespace: namespace,
+				Namespace: svcAccount,
 			},
 		},
 	}
