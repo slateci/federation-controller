@@ -252,7 +252,7 @@ func (c *ClusterNSController) syncHandler(key string) error {
 	}
 	// want to create a rolebinding using the service account (same as namespace that clusterNS lives in)
 	// the rolebinding should refer to namespace where the service account lives
-	createClusterNSRoleBindings(clusterNS.Name, clusterNS.ObjectMeta.Namespace, clusterNS.ObjectMeta.Namespace)
+	createClusterNSRoleBindings(clusterNS.Name, clusterNS.ObjectMeta.Namespace, clusterNS.Name)
 
 	// Update cluster information
 	clusterNS.Spec.Namespace = clusterNS.Name
@@ -378,8 +378,7 @@ func createClusterNSRoleBindings(clusterNSName string, svcAccount string, namesp
 	kubeClient := getKubeClientSet()
 	roleBinding := rbac.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      clusterNSName,
-			Namespace: namespace,
+			Name: clusterNSName,
 		},
 		RoleRef: rbac.RoleRef{
 			Kind:     "ClusterRole",

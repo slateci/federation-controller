@@ -39,7 +39,7 @@ spec:
       serviceAccountName: nrp-controller
       containers:
       - name: nrp-controller
-        image: hub.opensciencegrid.org/slate/nrp-controller:0.3.0
+        image: hub.opensciencegrid.org/slate/nrp-controller:0.3.3
         imagePullPolicy: Always
         command: ["/nrp-controller"]
         args: ["-v", "4"]
