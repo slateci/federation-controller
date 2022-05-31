@@ -250,7 +250,9 @@ func (c *ClusterNSController) syncHandler(key string) error {
 	if err = createClusterNSNamespace(clusterNS.Name); err != nil {
 		return err
 	}
-	createClusterNSRoleBindings(clusterNS.Name, clusterNS.ObjectMeta.Namespace, clusterNS.Name)
+	// want to create a rolebinding using the service account (same as namespace that clusterNS lives in)
+	// the rolebinding should refer to namespace where the service account lives
+	createClusterNSRoleBindings(clusterNS.Name, clusterNS.ObjectMeta.Namespace, clusterNS.ObjectMeta.Namespace)
 
 	// Update cluster information
 	clusterNS.Spec.Namespace = clusterNS.Name
