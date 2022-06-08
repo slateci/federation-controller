@@ -1,0 +1,17 @@
+apiVersion: v1
+items:
+- apiVersion: nrp-nautilus.io/v1alpha1
+  kind: Cluster
+  metadata:
+    creationTimestamp: "2022-04-26T20:39:33Z"
+    generation: 2
+    name: slate-system
+    resourceVersion: "23678829"
+    uid: d825b278-e909-40fd-ab76-fd0d4cf59c3e
+  spec:
+    Namespace: slate-system
+    Organization: ""
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""

@@ -8,7 +8,7 @@ then
   echo "Aborting upgrade"
 fi
 
-# kubectl delete deployment nrp-controller
+kubectl delete deployment nrp-controller -n kube-system
 if [[ $? != 0 ]];
 then
   echo  "Error while removing old NRP controller deployment"
@@ -26,14 +26,18 @@ kubectl get clusternamespace -n slate-system -o yaml > clusternamespace-crd-orig
 sed 's/v1alpha1/v1alpha2/' clusternamespace-crd-orig.yaml | sed 's/ClusterNamespace/ClusterNS/' | egrep -v '(creation|resource|uid| generation)' > clusternamespace-crd-new.yaml
 echo "New CRDS created"
 echo "Removing old CRDS from cluster"
-# kubectl delete -f cluster-crd-orig.yaml
-# kubectl delete -f clusternamespace-crd-orig.yaml
+kubectl delete -f cluster-crd-orig.yaml
+kubectl delete -f clusternamespace-crd-orig.yaml
+echo "Updating CRD definitions"
+kubectl delete crd clusters.nrp-nautilus.io
+kubectl create -f ../cluster-def.yaml
+kubectl create -f ../clusterns-def.yaml
 echo "Creating updated CRDS"
-#kubectl create -f cluster-crd-new.yaml
-#kubectl create -f clusternamespace-crd-new.yaml
+kubectl create -f cluster-crd-new.yaml
+kubectl create -f clusternamespace-crd-new.yaml
+echo "Sleeping for ns check"
+sleep 30
 cd ..
-
 echo "Deploying new controller"
-# kubectl delete deployment nrp-controller
-# kutectl apply -f xxx/ssthapa/go/src/nrp-clone/upgrade-controller.yaml          
+kubectl apply -f https://raw.githubusercontent.com/slateci/nrp-clone/main/upgrade-controller-debug.yaml
 

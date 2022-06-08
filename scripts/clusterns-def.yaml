@@ -1,0 +1,42 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  generation: 1
+  name: clusternss.nrp-nautilus.io
+spec:
+  conversion:
+    strategy: None
+  group: nrp-nautilus.io
+  names:
+    kind: ClusterNS
+    listKind: ClusterNSList
+    plural: clusternss
+    singular: clusterns
+  scope: Namespaced
+  versions:
+  - name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              Namespace:
+                format: str
+                type: string
+              Organization:
+                format: str
+                type: string
+            required:
+            - Organization
+            - Namespace
+            type: object
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ClusterNS
+    listKind: ClusterNSList
+    plural: clusternss
+  storedVersions:
+  - v1alpha2

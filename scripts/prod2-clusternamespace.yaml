@@ -1,0 +1,33 @@
+apiVersion: v1
+items:
+- apiVersion: nrp-nautilus.io/v1alpha1
+  kind: ClusterNamespace
+  metadata:
+    creationTimestamp: "2022-05-13T15:33:08Z"
+    generation: 1
+    name: slate-group-atlas-xcache
+    namespace: slate-system
+    resourceVersion: "27467138"
+    uid: 5b9b70c5-2933-4b50-9f18-45f4393551c5
+- apiVersion: nrp-nautilus.io/v1alpha1
+  kind: ClusterNamespace
+  metadata:
+    creationTimestamp: "2022-04-26T20:53:59Z"
+    generation: 1
+    name: slate-group-slate-dev
+    namespace: slate-system
+    resourceVersion: "23681259"
+    uid: 810c8582-10c3-4a4e-8dcf-84d08653dfff
+- apiVersion: nrp-nautilus.io/v1alpha1
+  kind: ClusterNamespace
+  metadata:
+    creationTimestamp: "2022-04-26T20:45:35Z"
+    generation: 1
+    name: slate-group-ssl
+    namespace: slate-system
+    resourceVersion: "23679861"
+    uid: d3bb2fa3-e9a6-48d3-8342-1aa5792e9ee8
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""
