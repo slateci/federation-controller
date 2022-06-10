@@ -1,6 +1,6 @@
 # Cloned from https://gitlab.com/ucsd-prp/nrp-controller 
 
-# NRP controller
+# Federation controller
 
 This project provides code for NRP controller - the component allowing to federate kubernetes clusters according to internal cluster policies.
 
