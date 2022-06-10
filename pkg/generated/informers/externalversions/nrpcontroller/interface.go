@@ -19,8 +19,8 @@ limitations under the License.
 package nrpcontroller
 
 import (
-	internalinterfaces "github.com/slateci/nrp-clone/pkg/generated/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/slateci/nrp-clone/pkg/generated/informers/externalversions/nrpcontroller/v1alpha1"
+	internalinterfaces "github.com/slateci/federation-controller/pkg/generated/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/slateci/federation-controller/pkg/generated/informers/externalversions/nrpcontroller/v1alpha1"
 )
 
 // Interface provides access to each of this group's versions.

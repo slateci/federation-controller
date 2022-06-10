@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/slateci/nrp-clone/pkg/generated/clientset/versioned"
-	clientset "github.com/slateci/nrp-clone/pkg/generated/clientset/versioned"
+	"github.com/slateci/federation-controller/pkg/generated/clientset/versioned"
+	clientset "github.com/slateci/federation-controller/pkg/generated/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
@@ -33,4 +33,12 @@ func getClusterClientSet() *versioned.Clientset {
 	}
 
 	return clusterClient
+}
+
+func getOldClusterCRDs(clientset kubernetes.Clientset) nrpClusterCRD {
+
+}
+
+func getOldClusterNSCRDs(clientset kubernetes.Clientset) nrpClusterNSCRD {
+
 }

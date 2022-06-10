@@ -1,4 +1,4 @@
-module github.com/slateci/nrp-clone
+module github.com/slateci/federation-controller
 
 go 1.17
 

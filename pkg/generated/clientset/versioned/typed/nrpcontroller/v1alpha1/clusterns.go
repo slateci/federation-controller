@@ -22,8 +22,8 @@ import (
 	"context"
 	"time"
 
-	v1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha2"
-	scheme "github.com/slateci/nrp-clone/pkg/generated/clientset/versioned/scheme"
+	v1alpha1 "github.com/slateci/federation-controller/pkg/apis/federationcontroller/v1alpha2"
+	scheme "github.com/slateci/federation-controller/pkg/generated/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

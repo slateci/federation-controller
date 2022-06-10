@@ -21,8 +21,8 @@ package v1alpha1
 import (
 	"net/http"
 
-	v1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha2"
-	"github.com/slateci/nrp-clone/pkg/generated/clientset/versioned/scheme"
+	v1alpha1 "github.com/slateci/federation-controller/pkg/apis/federationcontroller/v1alpha2"
+	"github.com/slateci/federation-controller/pkg/generated/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
@@ -32,7 +32,7 @@ type NrpcontrollerV1alpha1Interface interface {
 	ClusterNSsGetter
 }
 
-// NrpcontrollerV1alpha1Client is used to interact with features provided by the nrpcontroller group.
+// NrpcontrollerV1alpha1Client is used to interact with features provided by the federationcontroller group.
 type NrpcontrollerV1alpha1Client struct {
 	restClient rest.Interface
 }

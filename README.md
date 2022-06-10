@@ -1,8 +1,6 @@
-# Cloned from https://gitlab.com/ucsd-prp/nrp-controller 
-
 # Federation controller
 
-This project provides code for NRP controller - the component allowing to federate kubernetes clusters according to internal cluster policies.
+This project provides code for federation controller - the component allowing to federate kubernetes clusters according to internal cluster policies.
 
 The problem solved by this controller is giving kubernetes cluster admins ability to easily delegate permissions to other clusters admins to deploy in this cluster and access its resources. The set of resources and policies is defined by a cluster role and can vary for different clusters.
 
@@ -19,13 +17,13 @@ The problem solved by this controller is giving kubernetes cluster admins abilit
 
 ```bash
 # download repository
-$ go get gitlab.com/ucsd-prp/nrp-controller
+$ go get github.com/slateci/federation-controller.git
 
 # From project folder:
-$ cd nrp-controller
-$ dep ensure
-$ ./codegen.sh
-$ make buildrelease
+$ cd federation-controller
+$ go mod tidy
+$ ./codegen/update-codegen.sh
+$ go build
 ```
 
 ### Installation
@@ -40,31 +38,31 @@ $ make buildrelease
    Or apply it from web if standard admin role is fine:
 
    ```bash
-   $ kubectl apply -f    $ kubectl apply -f https://gitlab.com/ucsd-prp/nrp-controller/raw/master/federation-role.yaml
+   $ kubectl apply -f    $ kubectl apply -f 
 
    ```
 
 2. Start the controller:
 
    ```bash
-   $ kubectl apply -f https://raw.githubusercontent.com/slateci/nrp-clone/main/deploy.yaml
+   $ kubectl apply -f 
    ```
 
 ### Using
 
 The controller defines 2 types of [CRDs](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/): 
 
-* clusters.nrp-nautilus.io - a CRD for each external federated cluster (or some other entity that needs to federate)
+* clusters.slateci.io - a CRD for each external federated cluster (or some other entity that needs to federate)
 
-* clusternamespaces.nrp-nautilus.io - additional namespaces in the current cluster that belong to the external federated cluster
+* clusternss.slateci.io - additional namespaces in the current cluster that belong to the external federated cluster
 
 ```bash
-$ kubectl get crds | grep nrp-nautilus
-clusternamespaces.nrp-nautilus.io             2018-09-06T01:42:40Z
-clusters.nrp-nautilus.io                      2018-09-06T00:50:33Z
+$ kubectl get crds | grep slateci.io
+clusternss.slateci.io                    2018-09-06T01:42:40Z
+clusters.slateci.io                      2018-09-06T00:50:33Z
 ```
 
-The **clusters.nrp-nautilus.io** are cluster-wide.
+The **clusters.slateci.io** are cluster-wide.
 
 To federate with another cluster, we create the Cluster CRD object. The controller is watching the cluster objects, and will create the namespace corresponding to the cluster name. If such namespace is already taken, the controller will prepend a number to it. The cluster object will have the spec/namespace field changed to have the name of primary namespace. Inside the namespace it will create a service account with role binding to cluster-federation ClusterRole. Once the cluster is deleted, the associated namespace and all its contents will be also deleted.
 
@@ -79,3 +77,4 @@ To request a creation of additional namespaces in the same federated cluster, on
 [![asciicast](https://asciinema.org/a/l7pwo4kXPV4XcWYoGfNlAUEat.png)](https://asciinema.org/a/l7pwo4kXPV4XcWYoGfNlAUEat)
 
 
+### Based on code from NRP located at https://gitlab.com/ucsd-prp/nrp-controller 

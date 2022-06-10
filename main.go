@@ -18,7 +18,7 @@ package main
 
 import (
 	"flag"
-	nrpcontrollerv1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha2"
+	nrpcontrollerv1alpha1 "github.com/slateci/federation-controller/pkg/apis/federationcontroller/v1alpha2"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"time"
 
@@ -33,12 +33,12 @@ import (
 	//informers "k8s.io/sample-controller/pkg/generated/informers/externalversions"
 	//"k8s.io/sample-controller/pkg/signals"
 
-	clientset "github.com/slateci/nrp-clone/pkg/generated/clientset/versioned"
-	informers "github.com/slateci/nrp-clone/pkg/generated/informers/externalversions"
-	"github.com/slateci/nrp-clone/pkg/signals"
+	clientset "github.com/slateci/federation-controller/pkg/generated/clientset/versioned"
+	informers "github.com/slateci/federation-controller/pkg/generated/informers/externalversions"
+	"github.com/slateci/federation-controller/pkg/signals"
 )
 
-const controllerAgentName = "nrp-controller"
+const controllerAgentName = "federation-controller"
 const controllerVersion = "0.3.6"
 
 var (

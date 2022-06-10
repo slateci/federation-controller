@@ -19,7 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
-	nrpv1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha2"
+	nrpv1alpha2 "github.com/slateci/federation-controller/pkg/apis/federationcontroller/v1alpha2"
 	rbac "k8s.io/api/rbac/v1"
 	"time"
 
@@ -36,10 +36,10 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
-	clientset "github.com/slateci/nrp-clone/pkg/generated/clientset/versioned"
-	nrpscheme "github.com/slateci/nrp-clone/pkg/generated/clientset/versioned/scheme"
-	informers "github.com/slateci/nrp-clone/pkg/generated/informers/externalversions/nrpcontroller/v1alpha1"
-	listers "github.com/slateci/nrp-clone/pkg/generated/listers/nrpcontroller/v1alpha1"
+	clientset "github.com/slateci/federation-controller/pkg/generated/clientset/versioned"
+	nrpscheme "github.com/slateci/federation-controller/pkg/generated/clientset/versioned/scheme"
+	informers "github.com/slateci/federation-controller/pkg/generated/informers/externalversions/nrpcontroller/v1alpha1"
+	listers "github.com/slateci/federation-controller/pkg/generated/listers/nrpcontroller/v1alpha1"
 )
 
 const (
@@ -327,7 +327,7 @@ func (c *ClusterNSController) handleObject(obj interface{}) {
 	}
 }
 
-func (c *ClusterNSController) updateClusterNSStatus(cluster *nrpv1alpha1.ClusterNS) error {
+func (c *ClusterNSController) updateClusterNSStatus(cluster *nrpv1alpha2.ClusterNS) error {
 	klog.V(4).Info("updateClusterStatus")
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy

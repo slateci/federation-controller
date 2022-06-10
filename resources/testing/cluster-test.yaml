@@ -1,0 +1,5 @@
+apiVersion: nrp-nautilus.io/v1alpha2
+kind: Cluster
+metadata:
+  name: cluster1 
+  namespace: default

@@ -21,7 +21,7 @@ package externalversions
 import (
 	"fmt"
 
-	v1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha2"
+	v1alpha2 "github.com/slateci/federation-controller/pkg/apis/federationcontroller/v1alpha2"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -52,10 +52,10 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=nrpcontroller, Version=v1alpha2
-	case v1alpha1.SchemeGroupVersion.WithResource("clusters"):
+	// Group=federationcontroller, Version=v1alpha2
+	case v1alpha2.SchemeGroupVersion.WithResource("clusters"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Nrpcontroller().V1alpha1().Clusters().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("clusternss"):
+	case v1alpha2.SchemeGroupVersion.WithResource("clusternss"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Nrpcontroller().V1alpha1().ClusterNSs().Informer()}, nil
 
 	}

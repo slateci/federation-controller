@@ -23,9 +23,9 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "github.com/slateci/nrp-clone/pkg/generated/clientset/versioned"
-	internalinterfaces "github.com/slateci/nrp-clone/pkg/generated/informers/externalversions/internalinterfaces"
-	nrpcontroller "github.com/slateci/nrp-clone/pkg/generated/informers/externalversions/nrpcontroller"
+	versioned "github.com/slateci/federation-controller/pkg/generated/clientset/versioned"
+	internalinterfaces "github.com/slateci/federation-controller/pkg/generated/informers/externalversions/internalinterfaces"
+	nrpcontroller "github.com/slateci/federation-controller/pkg/generated/informers/externalversions/nrpcontroller"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
