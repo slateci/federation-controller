@@ -24,8 +24,8 @@ import (
 	time "time"
 
 	versioned "github.com/slateci/federation-controller/pkg/generated/clientset/versioned"
-	federationcontroller "github.com/slateci/federation-controller/pkg/generated/informers/externalversions/federationcontroller"
 	internalinterfaces "github.com/slateci/federation-controller/pkg/generated/informers/externalversions/internalinterfaces"
+	nrpcontroller "github.com/slateci/federation-controller/pkg/generated/informers/externalversions/nrpcontroller"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -172,9 +172,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Federationcontroller() federationcontroller.Interface
+	Nrpcontroller() nrpcontroller.Interface
 }
 
-func (f *sharedInformerFactory) Federationcontroller() federationcontroller.Interface {
-	return federationcontroller.New(f, f.namespace, f.tweakListOptions)
+func (f *sharedInformerFactory) Nrpcontroller() nrpcontroller.Interface {
+	return nrpcontroller.New(f, f.namespace, f.tweakListOptions)
 }

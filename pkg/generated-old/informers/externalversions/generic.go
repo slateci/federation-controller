@@ -54,9 +54,9 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	switch resource {
 	// Group=federationcontroller, Version=v1alpha2
 	case v1alpha2.SchemeGroupVersion.WithResource("clusters"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Federationcontroller().V1alpha2().Clusters().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Nrpcontroller().V1alpha1().Clusters().Informer()}, nil
 	case v1alpha2.SchemeGroupVersion.WithResource("clusternss"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Federationcontroller().V1alpha2().ClusterNSs().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Nrpcontroller().V1alpha1().ClusterNSs().Informer()}, nil
 
 	}
 

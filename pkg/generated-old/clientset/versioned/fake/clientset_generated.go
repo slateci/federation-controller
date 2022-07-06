@@ -20,8 +20,8 @@ package fake
 
 import (
 	clientset "github.com/slateci/federation-controller/pkg/generated/clientset/versioned"
-	federationcontrollerv1alpha2 "github.com/slateci/federation-controller/pkg/generated/clientset/versioned/typed/federationcontroller/v1alpha2"
-	fakefederationcontrollerv1alpha2 "github.com/slateci/federation-controller/pkg/generated/clientset/versioned/typed/federationcontroller/v1alpha2/fake"
+	nrpcontrollerv1alpha1 "github.com/slateci/federation-controller/pkg/generated/clientset/versioned/typed/nrpcontroller/v1alpha1"
+	fakenrpcontrollerv1alpha1 "github.com/slateci/federation-controller/pkg/generated/clientset/versioned/typed/nrpcontroller/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -79,7 +79,7 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// FederationcontrollerV1alpha2 retrieves the FederationcontrollerV1alpha2Client
-func (c *Clientset) FederationcontrollerV1alpha2() federationcontrollerv1alpha2.FederationcontrollerV1alpha2Interface {
-	return &fakefederationcontrollerv1alpha2.FakeFederationcontrollerV1alpha2{Fake: &c.Fake}
+// NrpcontrollerV1alpha1 retrieves the NrpcontrollerV1alpha1Client
+func (c *Clientset) NrpcontrollerV1alpha1() nrpcontrollerv1alpha1.NrpcontrollerV1alpha1Interface {
+	return &fakenrpcontrollerv1alpha1.FakeNrpcontrollerV1alpha1{Fake: &c.Fake}
 }

@@ -18,7 +18,7 @@ package main
 
 import (
 	"flag"
-	nrpcontrollerv1alpha1 "github.com/slateci/federation-controller/pkg/apis/federationcontroller/v1alpha2"
+	fedcontrollerv1alpha1 "github.com/slateci/federation-controller/pkg/apis/federationcontroller/v1alpha2"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"time"
 
@@ -39,7 +39,7 @@ import (
 )
 
 const controllerAgentName = "federation-controller"
-const controllerVersion = "0.3.6"
+const controllerVersion = "0.4.0"
 
 var (
 	masterURL  string
@@ -72,13 +72,17 @@ func main() {
 	}
 
 	klog.V(4).Info("Adding CRD")
-	if err = nrpcontrollerv1alpha1.CreateClusterCRD(apiextensionsClientSet); err != nil {
+	if err = fedcontrollerv1alpha1.CreateClusterCRD(apiextensionsClientSet); err != nil {
 		klog.Fatalf("Got error while creating Cluster CRD: %v", err.Error())
 	}
-	if err = nrpcontrollerv1alpha1.CreateNSCRD(apiextensionsClientSet); err != nil {
+	if err = fedcontrollerv1alpha1.CreateNSCRD(apiextensionsClientSet); err != nil {
 		klog.Fatalf("Got error while creating Cluster Namespace CRD: %v", err.Error())
 	}
 	klog.V(4).Info("Adding CRD done")
+
+	klog.V(4).Info("Upgrading existing nrp CRDs")
+	upgradeOldCRDS()
+	klog.V(4).Info("Upgrading existing nrp CRDs done")
 
 	klog.V(4).Info("Starting clusterController in goroutine")
 	go func() {
@@ -92,7 +96,8 @@ func main() {
 		klog.V(4).Info("Creating Cluster CRD controller")
 		clusterController := NewClusterController(kubeClient, clusterClient,
 			kubeInformerFactory.Apps().V1().Deployments(),
-			clusterInformerFactory.Nrpcontroller().V1alpha1().Clusters())
+			clusterInformerFactory.Federationcontroller().V1alpha2().Clusters())
+
 		kubeInformerFactory.Start(stopCh)
 		clusterInformerFactory.Start(stopCh)
 
@@ -110,7 +115,7 @@ func main() {
 
 		klog.V(4).Info("Creating ClusterNS CRD controller")
 		clusterNSController := NewClusterNSController(kubeClient, clusterClient,
-			clusterNSInformerFactory.Nrpcontroller().V1alpha1().ClusterNSs())
+			clusterNSInformerFactory.Federationcontroller().V1alpha2().ClusterNSs())
 
 		// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
 		// Start method is non-blocking and runs all registered informers in a dedicated goroutine.

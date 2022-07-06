@@ -6,12 +6,13 @@ buildgo:
 	go build 
 
 builddocker:
-	docker build -t hub.opensciencegrid.org/slate/federation-controller:$(VERSION) -f resources/building/Dockerfile
+	docker build -t hub.opensciencegrid.org/slate/federation-controller:$(VERSION) -f resources/building/Dockerfile .
 
 pushminikube: 
-	minikube image  build . -t hub.opensciencegrid.org/slate/federation-controller:$(VERSION)
+	minikube image  build -t hub.opensciencegrid.org/slate/federation-controller:$(VERSION) -f resources/building/Dockerfile .
 	
 pushdocker:
+	docker login hub.opensciencegrid.org
 	docker push hub.opensciencegrid.org/slate/federation-controller:$(VERSION)
 
 cleanup:

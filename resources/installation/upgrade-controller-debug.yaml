@@ -39,7 +39,7 @@ spec:
       serviceAccountName: federation-controller
       containers:
       - name: federation-controller
-        image: hub.opensciencegrid.org/slate/federation-controller:0.4.0
+        image: hub.opensciencegrid.org/slate/federation-controller:0.4.3
         imagePullPolicy: Always
         command: ["/federation-controller"]
         args: ["-v", "4"]

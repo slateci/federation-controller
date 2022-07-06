@@ -1,15 +1,15 @@
-apiVersion: nrp-nautilus.io/v1alpha2
+apiVersion: slateci.io/v1alpha2
 kind: Cluster
 metadata:
   name: cluster1
 ---
-apiVersion: nrp-nautilus.io/v1alpha2
+apiVersion: slateci.io/v1alpha2
 kind: ClusterNamespace
 metadata:
   name: cluster1ns1
   namespace: cluster1
 ---
-apiVersion: nrp-nautilus.io/v1alpha2
+apiVersion: slateci.io/v1alpha2
 kind: ClusterNamespace
 metadata:
   name: cluster1ns2

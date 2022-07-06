@@ -38,11 +38,11 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
-	nrpv1alpha2 "github.com/slateci/federation-controller/pkg/apis/federationcontroller/v1alpha2"
+	fedv1alpha2 "github.com/slateci/federation-controller/pkg/apis/federationcontroller/v1alpha2"
 	clientset "github.com/slateci/federation-controller/pkg/generated/clientset/versioned"
-	nrpscheme "github.com/slateci/federation-controller/pkg/generated/clientset/versioned/scheme"
-	informers "github.com/slateci/federation-controller/pkg/generated/informers/externalversions/nrpcontroller/v1alpha1"
-	listers "github.com/slateci/federation-controller/pkg/generated/listers/nrpcontroller/v1alpha1"
+	fedscheme "github.com/slateci/federation-controller/pkg/generated/clientset/versioned/scheme"
+	informers "github.com/slateci/federation-controller/pkg/generated/informers/externalversions/federationcontroller/v1alpha2"
+	listers "github.com/slateci/federation-controller/pkg/generated/listers/federationcontroller/v1alpha2"
 )
 
 const (
@@ -102,7 +102,7 @@ func NewClusterController(
 	// Create event broadcaster
 	// Add sample-controller types to the default Kubernetes Scheme so Events can be
 	// logged for sample-controller types.
-	utilruntime.Must(nrpscheme.AddToScheme(scheme.Scheme))
+	utilruntime.Must(fedscheme.AddToScheme(scheme.Scheme))
 	klog.V(4).Info("Creating event broadcaster")
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartStructuredLogging(0)
@@ -246,6 +246,12 @@ func (c *ClusterController) syncHandler(key string) error {
 	// Get the Cluster resource with this /name
 	cluster, err := c.clustersLister.Clusters(namespace).Get(name)
 	if err != nil {
+		// ******** IMPORTANT ********
+		// Possible get here if codegen is run and the modifications to generated
+		// code to handle cluster CRDs haven't been made to codegened source code
+		// If that's the case, then the following need to be modified:
+		// generated lister for cluster, see https://github.com/slateci/federation-controller/blob/main/pkg/generated/listers/nrpcontroller/v1alpha1/cluster.go#L92
+		// clientset: see https://github.com/slateci/federation-controller/blob/c1eb288efbb4c26e9d3870594a1dcf93169d2c36/pkg/generated/clientset/versioned/typed/nrpcontroller/v1alpha1/cluster.go
 		klog.V(4).Infof("Error in get: %s - %s ", err.Error(), namespace)
 		// If the Cluster resource no longer exists, it's been deleted and we need
 		// to clean things up
@@ -263,7 +269,10 @@ func (c *ClusterController) syncHandler(key string) error {
 	// Process Cluster
 	klog.V(4).Info("Creating namespace for Cluster")
 	createdNamespace := createClusterNamespace(cluster.Name)
+	klog.V(4).Info("Created namespace %s for Cluster", createdNamespace)
+	klog.V(4).Info("Creating serviceAccount for Cluster")
 	svcAcct := createServiceAccount(cluster.Name, createdNamespace)
+	klog.V(4).Info("Creating role bindings for Cluster")
 	createRoleBindings(cluster.Name, svcAcct, createdNamespace)
 
 	// If an error occurs during Get/Create, we'll requeue the item so we can
@@ -278,7 +287,7 @@ func (c *ClusterController) syncHandler(key string) error {
 	cluster.Spec.Organization = "slate"
 	err = c.updateClusterStatus(cluster)
 	if err != nil {
-		klog.Errorf("Error updating cluster %s ns %s", cluster.Name, err.Error())
+		klog.Errorf("Error updating cluster %s: %s", cluster.Name, err.Error())
 	}
 
 	// If an error occurs during Update, we'll requeue the item so we can
@@ -292,7 +301,7 @@ func (c *ClusterController) syncHandler(key string) error {
 	return nil
 }
 
-func (c *ClusterController) updateClusterStatus(cluster *nrpv1alpha2.Cluster) error {
+func (c *ClusterController) updateClusterStatus(cluster *fedv1alpha2.Cluster) error {
 	klog.V(4).Info("updateClusterStatus running")
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
@@ -302,7 +311,7 @@ func (c *ClusterController) updateClusterStatus(cluster *nrpv1alpha2.Cluster) er
 	// we must use Update instead of UpdateStatus to update the Status block of the Cluster resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
 	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.nrpclientset.NrpcontrollerV1alpha1().Clusters("").Update(context.TODO(), clusterCopy, metav1.UpdateOptions{})
+	_, err := c.nrpclientset.FederationcontrollerV1alpha2().Clusters("").Update(context.TODO(), clusterCopy, metav1.UpdateOptions{})
 	klog.V(4).Info("updateClusterStatus done")
 	return err
 }
@@ -501,7 +510,7 @@ func deleteCluster(clusterName string, clusterNamespace string) error {
 	// Delete any namespaces created by ClusterNSs, need to do this before deleting the cluster namespace
 	klog.V(4).Info("Getting ClusterNS for deletion")
 	clusterClient := getClusterClientSet()
-	clusterNSList, err := clusterClient.NrpcontrollerV1alpha1().ClusterNSs(clusterNamespace).List(context.TODO(), metav1.ListOptions{})
+	clusterNSList, err := clusterClient.FederationcontrollerV1alpha2().ClusterNSs(clusterNamespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		klog.Errorf("Error getting additional namespaces for %s: %s", clusterName, err.Error())
 		return err

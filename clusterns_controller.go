@@ -38,8 +38,8 @@ import (
 
 	clientset "github.com/slateci/federation-controller/pkg/generated/clientset/versioned"
 	nrpscheme "github.com/slateci/federation-controller/pkg/generated/clientset/versioned/scheme"
-	informers "github.com/slateci/federation-controller/pkg/generated/informers/externalversions/nrpcontroller/v1alpha1"
-	listers "github.com/slateci/federation-controller/pkg/generated/listers/nrpcontroller/v1alpha1"
+	informers "github.com/slateci/federation-controller/pkg/generated/informers/externalversions/federationcontroller/v1alpha2"
+	listers "github.com/slateci/federation-controller/pkg/generated/listers/federationcontroller/v1alpha2"
 )
 
 const (
@@ -337,7 +337,7 @@ func (c *ClusterNSController) updateClusterNSStatus(cluster *nrpv1alpha2.Cluster
 	// we must use Update instead of UpdateStatus to update the Status block of the Cluster resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
 	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.nrpclientset.NrpcontrollerV1alpha1().ClusterNSs(cluster.ObjectMeta.Namespace).Update(context.TODO(), clusterCopy, metav1.UpdateOptions{})
+	_, err := c.nrpclientset.FederationcontrollerV1alpha2().ClusterNSs(cluster.ObjectMeta.Namespace).Update(context.TODO(), clusterCopy, metav1.UpdateOptions{})
 	klog.V(4).Info("updateClusterStatus done")
 	return err
 }
