@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"math/rand"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -442,6 +443,33 @@ func createServiceAccount(clusterName string, namespace string) string {
 			return clusterName
 		}
 	}
+	// Check to see if a secret was generated for the service account and if not generate it
+	if len(srvAcc.Secrets) == 0 {
+		// generate secret and add reference to it in the account
+		// generate  random string for naming the token
+		const length = 8
+		rand.Seed(time.Now().UnixNano())
+		chars := make([]byte, length)
+		rand.Read(chars)
+		suffix := fmt.Sprintf("%x", chars)[:length]
+
+		secretName := fmt.Sprintf("%s-token-%x", clusterName, suffix)
+		serviceAccountSecret := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        secretName,
+				Namespace:   namespace,
+				Annotations: map[string]string{"kubernetes.io/service-account.name": clusterName},
+			},
+			Data: nil,
+			Type: corev1.SecretTypeServiceAccountToken,
+		}
+		_, err := kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), &serviceAccountSecret, metav1.CreateOptions{})
+		if err != nil {
+			klog.Fatalf("Error creating service account secret %s", err.Error())
+			return ""
+		}
+	}
+
 	return srvAcc.Name
 }
 
