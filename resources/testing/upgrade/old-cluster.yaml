@@ -1,0 +1,4 @@
+apiVersion: "nrp-nautilus.io/v1alpha1"
+kind: Cluster
+metadata:
+  name: oldcluster1
