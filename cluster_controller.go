@@ -36,6 +36,7 @@ import (
 	appslisters "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	ref "k8s.io/client-go/tools/reference"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
@@ -267,6 +268,17 @@ func (c *ClusterController) syncHandler(key string) error {
 	}
 	klog.V(4).Info("Processing Cluster")
 
+	updated, ok := cluster.Annotations["updated-by"]
+	if ok {
+		// updated-by annotation exists, make sure it's what we expect
+		if updated == "federation-controller" {
+			// the CRD we're looking at is an upgraded Cluster entry
+			// e.g. from an upgrade of the nrp-controller, it should already have
+			// everything so don't update
+			klog.V(4).Info("Skipping processing for upgraded Cluster")
+			return nil
+		}
+	}
 	// Process Cluster
 	klog.V(4).Info("Creating namespace for Cluster")
 	createdNamespace := createClusterNamespace(cluster.Name)
@@ -463,11 +475,19 @@ func createServiceAccount(clusterName string, namespace string) string {
 			Data: nil,
 			Type: corev1.SecretTypeServiceAccountToken,
 		}
-		_, err := kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), &serviceAccountSecret, metav1.CreateOptions{})
+		accountSecret, err := kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), &serviceAccountSecret, metav1.CreateOptions{})
 		if err != nil {
-			klog.Fatalf("Error creating service account secret %s", err.Error())
+			klog.Fatalf("Error creating service account secret: %s", err.Error())
 			return ""
 		}
+		secretRef, err := ref.GetReference(scheme.Scheme, accountSecret)
+		serviceAccount.Secrets = append(serviceAccount.Secrets, *secretRef)
+		kubeClient.CoreV1().ServiceAccounts(namespace).Update(context.TODO(), &serviceAccount, metav1.UpdateOptions{})
+		if err != nil {
+			klog.Fatalf("Error adding token to  service account: %s", err.Error())
+			return ""
+		}
+
 	}
 
 	return srvAcc.Name

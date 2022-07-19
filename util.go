@@ -70,7 +70,7 @@ func getOldClusterCRDs() fedv1alpha2.ClusterList {
 	clusterRestClient := getOldSchemaClient()
 	oldClusterList := nrpv1alpha1.ClusterList{}
 
-	err := clusterRestClient.Get().Resource("Cluster").Do(context.TODO()).Into(&oldClusterList)
+	err := clusterRestClient.Get().Resource("clusters").Do(context.TODO()).Into(&oldClusterList)
 	if errors.IsNotFound(err) {
 		klog.V(4).Info("No CRDs present, upgrade not needed")
 		return fedv1alpha2.ClusterList{}
@@ -80,8 +80,11 @@ func getOldClusterCRDs() fedv1alpha2.ClusterList {
 	newClusterList := []fedv1alpha2.Cluster{}
 	for _, cluster := range oldClusterList.Items {
 		newClusterList = append(newClusterList, fedv1alpha2.Cluster{
-			TypeMeta:   metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{},
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        cluster.Spec.Namespace,
+				Annotations: map[string]string{"upgraded-by": "federation-controller"},
+			},
 			Spec: fedv1alpha2.ClusterSpec{
 				Organization: cluster.Spec.Organization,
 				Namespace:    cluster.Spec.Namespace,
@@ -92,24 +95,32 @@ func getOldClusterCRDs() fedv1alpha2.ClusterList {
 	return finalList
 }
 
-func getOldClusterNSCRDs() fedv1alpha2.ClusterNSList {
+func getOldClusterNSCRDs(namespaces []string) fedv1alpha2.ClusterNSList {
 	clusterRestClient := getOldSchemaClient()
 	oldClusterNamespaceList := nrpv1alpha1.ClusterList{}
 
-	err := clusterRestClient.Get().Resource("Cluster").Do(context.TODO()).Into(&oldClusterNamespaceList)
-	if errors.IsNotFound(err) {
-		klog.V(4).Info("No CRDs present, upgrade not needed")
-		return fedv1alpha2.ClusterNSList{}
-	} else if err != nil {
-		klog.Fatalf("Can't get old ClusterNamespace CRD: %s", err.Error())
+	for _, namespace := range namespaces {
+		tmpNSList := nrpv1alpha1.ClusterList{}
+		err := clusterRestClient.Get().Namespace(namespace).Resource("clusternamespaces").Do(context.TODO()).Into(&tmpNSList)
+		if errors.IsNotFound(err) {
+			klog.V(4).Info("No CRDs present, upgrade not needed")
+			return fedv1alpha2.ClusterNSList{}
+		} else if err != nil {
+			klog.Fatalf("Can't get old ClusterNamespace CRD: %s", err.Error())
+		}
+		oldClusterNamespaceList.Items = append(oldClusterNamespaceList.Items, tmpNSList.Items...)
 	}
 
 	oldClusterNSList := nrpv1alpha1.ClusterNamespaceList{}
 	newClusterNSList := []fedv1alpha2.ClusterNS{}
 	for _, clusterNS := range oldClusterNSList.Items {
 		newClusterNSList = append(newClusterNSList, fedv1alpha2.ClusterNS{
-			TypeMeta:   metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{},
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        clusterNS.Name,
+				Namespace:   clusterNS.Namespace,
+				Annotations: map[string]string{"upgraded-by": "federation-controller"},
+			},
 			Spec: fedv1alpha2.ClusterSpec{
 				Organization: clusterNS.Spec.Organization,
 				Namespace:    clusterNS.Spec.Namespace,
@@ -127,14 +138,17 @@ func upgradeOldCRDS() {
 		return
 	}
 	clusterClient := getClusterClientSet()
+	// namespaces should have a list of namespaces where clusterns crds may live
+	var namespaces []string
 	for _, cluster := range newClusters.Items {
+		namespaces = append(namespaces, cluster.Spec.Namespace)
 		_, err := clusterClient.FederationcontrollerV1alpha2().Clusters(cluster.Spec.Namespace).Create(context.TODO(), &cluster, metav1.CreateOptions{})
 		if err != nil {
 			klog.Fatalf("Can't update cluster %s: %s", cluster.Name, err.Error())
 		}
 
 	}
-	newClusterNS := getOldClusterNSCRDs()
+	newClusterNS := getOldClusterNSCRDs(namespaces)
 	if len(newClusterNS.Items) == 0 {
 		klog.V(4).Info("No ClusterNamespace upgrade needed")
 		return
