@@ -482,7 +482,7 @@ func createServiceAccount(clusterName string, namespace string) string {
 		}
 		secretRef, err := ref.GetReference(scheme.Scheme, accountSecret)
 		serviceAccount.Secrets = append(serviceAccount.Secrets, *secretRef)
-		kubeClient.CoreV1().ServiceAccounts(namespace).Update(context.TODO(), &serviceAccount, metav1.UpdateOptions{})
+		_, err = kubeClient.CoreV1().ServiceAccounts(namespace).Update(context.TODO(), &serviceAccount, metav1.UpdateOptions{})
 		if err != nil {
 			klog.Fatalf("Error adding token to  service account: %s", err.Error())
 			return ""
