@@ -97,23 +97,27 @@ func getOldClusterCRDs() fedv1alpha2.ClusterList {
 
 func getOldClusterNSCRDs(namespaces []string) fedv1alpha2.ClusterNSList {
 	clusterRestClient := getOldSchemaClient()
-	oldClusterNamespaceList := nrpv1alpha1.ClusterList{}
+	oldClusterNamespaceList := nrpv1alpha1.ClusterNamespaceList{}
 
 	for _, namespace := range namespaces {
-		tmpNSList := nrpv1alpha1.ClusterList{}
+		klog.V(4).Infof("Looking for clusternamespaces in namespace %s", namespace)
+		tmpNSList := nrpv1alpha1.ClusterNamespaceList{}
 		err := clusterRestClient.Get().Namespace(namespace).Resource("clusternamespaces").Do(context.TODO()).Into(&tmpNSList)
 		if errors.IsNotFound(err) {
-			klog.V(4).Info("No CRDs present, upgrade not needed")
-			return fedv1alpha2.ClusterNSList{}
+			continue
 		} else if err != nil {
 			klog.Fatalf("Can't get old ClusterNamespace CRD: %s", err.Error())
 		}
 		oldClusterNamespaceList.Items = append(oldClusterNamespaceList.Items, tmpNSList.Items...)
 	}
 
-	oldClusterNSList := nrpv1alpha1.ClusterNamespaceList{}
+	if len(oldClusterNamespaceList.Items) == 0 {
+		klog.V(4).Info("No CRDs present, upgrade not needed")
+		return fedv1alpha2.ClusterNSList{}
+	}
+
 	newClusterNSList := []fedv1alpha2.ClusterNS{}
-	for _, clusterNS := range oldClusterNSList.Items {
+	for _, clusterNS := range oldClusterNamespaceList.Items {
 		newClusterNSList = append(newClusterNSList, fedv1alpha2.ClusterNS{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
@@ -143,7 +147,8 @@ func upgradeOldCRDS() {
 	for _, cluster := range newClusters.Items {
 		namespaces = append(namespaces, cluster.Spec.Namespace)
 		_, err := clusterClient.FederationcontrollerV1alpha2().Clusters(cluster.Spec.Namespace).Create(context.TODO(), &cluster, metav1.CreateOptions{})
-		if err != nil {
+		// if the cluster already exists, it was created on a prior run and is not an error
+		if err != nil && !errors.IsAlreadyExists(err) {
 			klog.Fatalf("Can't update cluster %s: %s", cluster.Name, err.Error())
 		}
 
@@ -154,8 +159,8 @@ func upgradeOldCRDS() {
 		return
 	}
 	for _, clusterNS := range newClusterNS.Items {
-		_, err := clusterClient.FederationcontrollerV1alpha2().ClusterNSs("").Create(context.TODO(), &clusterNS, metav1.CreateOptions{})
-		if err != nil {
+		_, err := clusterClient.FederationcontrollerV1alpha2().ClusterNSs(clusterNS.Namespace).Create(context.TODO(), &clusterNS, metav1.CreateOptions{})
+		if err != nil && !errors.IsAlreadyExists(err) {
 			klog.Fatalf("Can't update clusterNS %s: %s", clusterNS.Name, err.Error())
 		}
 	}

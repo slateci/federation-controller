@@ -268,7 +268,7 @@ func (c *ClusterController) syncHandler(key string) error {
 	}
 	klog.V(4).Info("Processing Cluster")
 
-	updated, ok := cluster.Annotations["updated-by"]
+	updated, ok := cluster.Annotations["upgraded-by"]
 	if ok {
 		// updated-by annotation exists, make sure it's what we expect
 		if updated == "federation-controller" {
@@ -282,7 +282,7 @@ func (c *ClusterController) syncHandler(key string) error {
 	// Process Cluster
 	klog.V(4).Info("Creating namespace for Cluster")
 	createdNamespace := createClusterNamespace(cluster.Name)
-	klog.V(4).Info("Created namespace %s for Cluster", createdNamespace)
+	klog.V(4).Infof("Created namespace %s for Cluster %s", createdNamespace, cluster.Name)
 	klog.V(4).Info("Creating serviceAccount for Cluster")
 	svcAcct := createServiceAccount(cluster.Name, createdNamespace)
 	klog.V(4).Info("Creating role bindings for Cluster")
