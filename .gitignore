@@ -28,3 +28,6 @@ _testmain.go
 pkg/client
 vendor
 Gopkg.lock
+
+# federation-controller binary
+federation-controller

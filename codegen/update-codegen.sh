@@ -28,8 +28,8 @@ CODEGEN_PKG=${CODEGEN_PKG:-$(cd "${SCRIPT_ROOT}"; ls -d -1 ./vendor/k8s.io/code-
 
 echo ${BASH_SOURCE[0]}
 bash "${CODEGEN_PKG}"/generate-groups.sh "deepcopy,client,informer,lister" \
-  github.com/slateci/nrp-clone/pkg/generated github.com/slateci/nrp-clone/pkg/apis \
-  nrpcontroller:v1alpha1 \
+  github.com/slateci/federation-controller/pkg/generated github.com/slateci/federation-controller/pkg/apis \
+  federationcontroller:v1alpha2 \
   --output-base "$(dirname "${BASH_SOURCE[0]}")/../../.." \
   --go-header-file "${SCRIPT_ROOT}"/codegen/boilerplate.go.txt
 

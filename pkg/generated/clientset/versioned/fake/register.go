@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	nrpcontrollerv1alpha1 "github.com/slateci/nrp-clone/pkg/apis/nrpcontroller/v1alpha2"
+	federationcontrollerv1alpha2 "github.com/slateci/federation-controller/pkg/apis/federationcontroller/v1alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -31,7 +31,7 @@ var scheme = runtime.NewScheme()
 var codecs = serializer.NewCodecFactory(scheme)
 
 var localSchemeBuilder = runtime.SchemeBuilder{
-	nrpcontrollerv1alpha1.AddToScheme,
+	federationcontrollerv1alpha2.AddToScheme,
 }
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition

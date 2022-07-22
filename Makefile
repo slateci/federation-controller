@@ -1,19 +1,22 @@
-default: buildrelease
+VERSION := 0.0.0
+
+default: buildgo
 
 buildgo:
 	go build 
 
 builddocker:
-	docker build -t registry.gitlab.com/ucsd-prp/nrp-controller:latest .
+	docker build -t hub.opensciencegrid.org/slate/federation-controller:$(VERSION) -f resources/building/Dockerfile .
 
 pushminikube: 
-	minikube image  build . -t nrp-controller:latest
+	minikube image  build -t hub.opensciencegrid.org/slate/federation-controller:$(VERSION) -f resources/building/Dockerfile .
 	
 pushdocker:
-	docker push registry.gitlab.com/ucsd-prp/nrp-controller
+	docker login hub.opensciencegrid.org
+	docker push hub.opensciencegrid.org/slate/federation-controller:$(VERSION)
 
 cleanup:
-	rm nrp-clone
+	rm federation-controller
 
 buildrelease: buildgo builddocker pushdocker cleanup
 
