@@ -4,23 +4,10 @@ metadata:
   name: federation-cluster
 rules:
 - apiGroups:
-  - apiextensions.k8s.io
-  resources:
-  - customresourcedefinitions
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - "slateci.io"
   resources:
-  - clusternamespaces
   - clusternss
+  - clusters
   verbs:
   - create
   - delete
@@ -221,3 +208,16 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+    - apiextensions.k8s.io
+  resources:
+    - customresourcedefinitions
+  verbs:
+    - create
+    - delete
+    - deletecollection
+    - get
+    - list
+    - patch
+    - update
+    - watch
