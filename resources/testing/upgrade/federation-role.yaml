@@ -6,9 +6,16 @@ metadata:
     slate-federation-role-version: "v1"
 rules:
 - apiGroups:
-  - "nrp-nautilus.io"
+    - apiextensions.k8s.io
+  resources:
+    - customresourcedefinitions
+  verbs:
+    - "*"
+- apiGroups:
+  - "slateci.io"
   resources:
   - clusternamespaces
+  - clusters
   verbs:
   - create
   - delete
