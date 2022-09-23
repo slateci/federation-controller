@@ -18,6 +18,20 @@ rules:
   - update
   - watch
 - apiGroups:
+    - "nrp-nautilus.io"
+  resources:
+    - clusternss
+    - clusters
+  verbs:
+    - create
+    - delete
+    - deletecollection
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
   - ""
   resources:
   - pods
@@ -161,14 +175,8 @@ rules:
 - apiGroups:
   - networking.k8s.io
   resources:
-    - "ingresses"
-  verbs:
-    - get
-    - list
-- apiGroups:
-  - networking.k8s.io
-  resources:
   - networkpolicies
+  - ingresses
   verbs:
   - create
   - delete
