@@ -2,6 +2,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: federation-cluster
+  labels:
+    slate-federation-role-version: "v2"
 rules:
 - apiGroups:
   - "slateci.io"
@@ -211,6 +213,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: federation-cluster-global
+  labels:
+    slate-federation-role-version: "v2"
 rules:
 - apiGroups:
   - ""
