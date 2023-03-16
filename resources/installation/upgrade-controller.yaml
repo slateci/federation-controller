@@ -51,7 +51,7 @@ metadata:
 roleRef:
   kind: ClusterRole
   name: federation-crd-edit
-  apiGroup: rbac.authorization.k8s.io00
+  apiGroup: rbac.authorization.k8s.io
 subjects:
 - kind: ServiceAccount
   name: federation-controller
